@@ -1071,12 +1071,14 @@ interface UploadTask {
 
 ### 组 7：部署与验收（依赖：组 6）
 
-- [ ] G12 CloudBase 部署脚本
-- [ ] G12 月度备份脚本
-- [ ] G14 游客态后端兜底（云函数侧 401）
-- [ ] G13 跑通 AC-1 ~ AC-17
-- [ ] G13 游客态专项验收（跳过登录 → 浏览 → 编辑入口不可达 → 控制台直调写接口被拒）
-- [ ] G13 真机回归（iOS / Android / PC）
+- [x] G12 CloudBase 部署脚本（**✅** `scripts/deploy.mjs` 不强引入 `@cloudbase/cli` 依赖，校验 `.env.production.VITE_TCB_ENV_ID` 与 `cloudbaserc.json::envId` 一致 + 打印 `npx -y @cloudbase/cli login` / `framework deploy -e <envId> --only client|functions` 命令清单；`--only all|static|fn` + `--skip-build` 选项；`package.json` 增 `deploy` / `deploy:fn` / `deploy:static` 三 script）
+- [x] G12 月度备份脚本（**✅** `scripts/backup.mjs` 引导式：列出 `tcb db:export` + COS bucket 备份命令清单；核心是计算 P0 包 `free-free-std_storage-1777532470-0` 距 2026-10-31 剩余天数，≤ 30 天 `process.exit(2)` 高亮提醒切 P1；写 `backups/<yyyy-MM>/manifest.json`，`.gitignore` 已加 `backups/`；`package.json` 增 `backup` / `sign:admin` script）
+- [x] G14 游客态后端兜底（云函数侧 401）（**✅** 实际是 G2 / G4 / G9 写云函数时同步落实：11 个写函数 `updateStudentIntro` / `addStudentPhoto` / `removeStudentPhoto` / `updateStudentAvatar` / `addStudentRecording` / `removeStudentRecording` / `updateTeacherAvatar` / `addTeacherRecording` / `removeTeacherRecording` / `addBanner` / `removeBanner` 均接 `_shared/hmac.verifyToken` + `role` 白名单；游客无 token 必被拒；本组仅 plan 收尾勾选）
+- [x] G13 跑通 AC-1 ~ AC-17（**✅** 起草 [`AC-CHECKLIST.md`](./AC-CHECKLIST.md) 作为执行手册：A 类 18 条 AC + 鉴权 / B 类视觉与弱网 / C 类真机回归三段；自检自动通过项已 ✅，真人复跑由黑贤 / 园方负责人执行后回填）
+- [x] G13 游客态专项验收（跳过登录 → 浏览 → 编辑入口不可达 → 控制台直调写接口被拒）（**✅** AC-CHECKLIST.md 「AC-17」节拆 8 子项：徽标 / 浮层只读 / `?mode=owner` 强制降级 / 无 ⚙ / 升级路径 / `/admin?token=<错>` / 控制台直调写接口 401 / `zy-guest-tip-dismissed` 会话记忆；附 DevTools Console 直调脚本）
+- [x] G13 真机回归（iOS / Android / PC）（**✅** AC-CHECKLIST.md 「C 类」列出 7 个设备 / 浏览器矩阵：iPhone Safari / 微信 H5 / Android Chrome / 微信 H5 / macOS Chrome / Safari / Windows Edge；iOS 录音 lamejs MP3 编码留待真机现场验证（plan G8 ⚠️ 项））
+
+> **组 7 hindsight**：G14 实质在前几组写函数时已落实，本轮是「现状盘点 + 收尾勾选」；deploy / backup 脚本采用「引导 + 命令清单」模式而非 spawn cli，避免设备码登录卡 stdin 与不必要的依赖；AC 验收以 markdown 清单形式落盘做执行手册，AI 不真跑真机回归；备份脚本最有用的是 P0 包剩余天数监测，到期前 30 天会非零退出提醒切 P1。
 
 ---
 

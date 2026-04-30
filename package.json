@@ -16,7 +16,12 @@
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
-    "format": "prettier --write \"src/**/*.{ts,vue,json,css,md}\""
+    "format": "prettier --write \"src/**/*.{ts,vue,json,css,md}\"",
+    "deploy": "node scripts/deploy.mjs",
+    "deploy:fn": "node scripts/deploy.mjs --only fn --skip-build",
+    "deploy:static": "node scripts/deploy.mjs --only static",
+    "backup": "node scripts/backup.mjs",
+    "sign:admin": "node scripts/sign-admin-token.mjs"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
