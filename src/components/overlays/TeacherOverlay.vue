@@ -28,6 +28,8 @@ import { useMp3Encode } from '@/composables/useMp3Encode'
 import { useAudioPlayer } from '@/composables/useAudioPlayer'
 import { toast } from '@/composables/useToast'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import { defaultTeacherAvatar } from '@/utils/defaultAvatar'
+import { isNetworkError, networkErrorMessage } from '@/utils/network'
 import { MAX_RECORDING_SECONDS } from '@/utils/constants'
 
 interface Props {
@@ -110,7 +112,12 @@ async function onAvatarPicked(e: Event): Promise<void> {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
-  if (!file || !detail.value || !token.value) return
+  if (!file) return
+  await doUploadAvatar(file)
+}
+
+async function doUploadAvatar(file: File): Promise<void> {
+  if (!detail.value || !token.value) return
   const tid = toast.loading('正在更新头像…')
   try {
     const compressed = await compressor.compress(file)
@@ -130,7 +137,14 @@ async function onAvatarPicked(e: Event): Promise<void> {
     toast.success('头像已更新')
     emit('updated')
   } catch (err) {
-    toast.error((err as Error).message || '头像上传失败')
+    const fallback = (err as Error).message || '头像上传失败'
+    if (isNetworkError(err)) {
+      toast.errorWithRetry(networkErrorMessage(err, fallback), () =>
+        doUploadAvatar(file),
+      )
+    } else {
+      toast.error(fallback)
+    }
   } finally {
     toast.dismiss(tid)
   }
@@ -270,7 +284,14 @@ async function saveRecording(): Promise<void> {
     recorder.cancel()
     recordingPanelOpen.value = false
   } catch (err) {
-    toast.error((err as Error).message || '录音上传失败')
+    const fallback = (err as Error).message || '录音上传失败'
+    if (isNetworkError(err)) {
+      toast.errorWithRetry(networkErrorMessage(err, fallback), () => {
+        void saveRecording()
+      })
+    } else {
+      toast.error(fallback)
+    }
   } finally {
     toast.dismiss(tid)
     recordingBusy.value = false
@@ -337,8 +358,11 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
             <!-- 头像 -->
             <section class="avatar-section">
               <div class="avatar-wrap">
-                <img v-if="detail.avatar?.url" :src="detail.avatar.url" :alt="detail.name" />
-                <span v-else class="avatar-initial">{{ Array.from(detail.name)[0] || '师' }}</span>
+                <img
+                  :src="detail.avatar?.url || defaultTeacherAvatar()"
+                  :alt="detail.name"
+                  decoding="async"
+                />
                 <div v-if="avatarStatus === 'uploading'" class="avatar-mask">上传中…</div>
               </div>
               <button
@@ -812,6 +836,8 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
   cursor: not-allowed;
 }
 
+/* 进出动效（plan Q-OVERLAY-MOTION 方案 A）：
+ *  移动端 sheet 上滑；PC 端 ≥768px 居中卡 scale；reduced-motion 仅淡入 */
 .overlay-fade-enter-active,
 .overlay-fade-leave-active {
   transition: opacity 0.22s ease;
@@ -831,5 +857,32 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
 }
 .overlay-fade-leave-to .overlay-sheet {
   transform: translateY(16px);
+}
+
+@media (min-width: 768px) {
+  .overlay-fade-enter-active .overlay-sheet,
+  .overlay-fade-leave-active .overlay-sheet {
+    transition: transform 0.22s ease, opacity 0.22s ease;
+  }
+  .overlay-fade-enter-from .overlay-sheet {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  .overlay-fade-leave-to .overlay-sheet {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay-fade-enter-active .overlay-sheet,
+  .overlay-fade-leave-active .overlay-sheet {
+    transition: opacity 0.18s ease;
+  }
+  .overlay-fade-enter-from .overlay-sheet,
+  .overlay-fade-leave-to .overlay-sheet {
+    transform: none;
+    opacity: 0;
+  }
 }
 </style>

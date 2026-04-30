@@ -36,6 +36,7 @@ import { useUpload, uuidShort } from '@/composables/useUpload'
 import { useToast } from '@/composables/useToast'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import { MAX_IMAGE_BYTES, ROUTES } from '@/utils/constants'
+import { isNetworkError, networkErrorMessage } from '@/utils/network'
 
 const route = useRoute()
 const router = useRouter()
@@ -126,6 +127,15 @@ async function onFilePicked(e: Event) {
     return
   }
   const trimmed = captionDraft.value.trim().slice(0, 60)
+  // G11：把单次上传抽成可重入闭包，弱网失败 toast 的「重试」按钮直接调用它
+  await doUploadBanner(file, trimmed)
+}
+
+async function doUploadBanner(file: File, caption: string) {
+  if (!auth.token) {
+    toast.error('管理员 token 缺失，请刷新页面')
+    return
+  }
   submitting.value = true
   const tid = toast.loading('正在上传合影…')
   try {
@@ -145,18 +155,25 @@ async function onFilePicked(e: Event) {
       token: auth.token,
       fileID: result.fileID,
       url: result.url,
-      caption: trimmed || undefined,
+      caption: caption || undefined,
     })
     // unshift：与 listBanners orderBy createdAt desc 顺序保持一致
     classData.banners.data.unshift(r.banner)
     captionDraft.value = ''
     toast.success('合影已上传')
   } catch (err) {
-    const msg =
+    const fallback =
       err instanceof BannerApiError
         ? err.message || '上传失败，请稍后重试'
         : (err as Error)?.message || '上传失败，请稍后重试'
-    toast.error(msg)
+    // 弱网类提示走「重试」action（不自动消失），其它走默认错误 toast
+    if (isNetworkError(err)) {
+      toast.errorWithRetry(networkErrorMessage(err, fallback), () =>
+        doUploadBanner(file, caption),
+      )
+    } else {
+      toast.error(fallback)
+    }
   } finally {
     toast.dismiss(tid)
     submitting.value = false

@@ -6,9 +6,15 @@
  * - 类型映射图标：success ✓ / error ✕ / info ⓘ / loading ↻（CSS spin）
  * - tap 任意 toast 立即 dismiss；error / info 不带图标也能 ok
  */
-import { useToast } from '@/composables/useToast'
+import { useToast, type ToastItem } from '@/composables/useToast'
 
 const { items, dismiss } = useToast()
+
+function onActionClick(t: ToastItem) {
+  // 调 action 后立即收起 toast，避免「重试中」期间叠加多份
+  if (t.action) t.action.handler()
+  dismiss(t.id)
+}
 </script>
 
 <template>
@@ -21,7 +27,7 @@ const { items, dismiss } = useToast()
           class="toast-item"
           :data-type="t.type"
           role="status"
-          @click="dismiss(t.id)"
+          @click="t.action ? null : dismiss(t.id)"
         >
           <span class="toast-icon" aria-hidden="true">
             <template v-if="t.type === 'success'">✓</template>
@@ -32,6 +38,14 @@ const { items, dismiss } = useToast()
             <template v-else>ⓘ</template>
           </span>
           <span class="toast-message">{{ t.message }}</span>
+          <button
+            v-if="t.action"
+            type="button"
+            class="toast-action"
+            @click.stop="onActionClick(t)"
+          >
+            {{ t.action.label }}
+          </button>
         </div>
       </transition-group>
     </div>
@@ -101,6 +115,22 @@ const { items, dismiss } = useToast()
 }
 .toast-message {
   word-break: break-word;
+}
+.toast-action {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  margin-left: 4px;
+  flex-shrink: 0;
+  transition: background 0.18s ease;
+}
+.toast-action:hover {
+  background: rgba(255, 255, 255, 0.24);
 }
 .toast-enter-active,
 .toast-leave-active {

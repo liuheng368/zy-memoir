@@ -1065,9 +1065,9 @@ interface UploadTask {
 
 ### 组 6：视觉打磨与边界（依赖：所有上面）
 
-- [ ] G11 默认头像 / 空态 / 懒加载 / 弱网 Toast
-- [ ] G11 头像墙具体布局（**⚠️** 待 spec Q-LAYOUT）
-- [ ] G11 浮层动效（**⚠️** 待 spec Q-OVERLAY-MOTION）
+- [x] G11 默认头像 / 空态 / 懒加载 / 弱网 Toast（**✅** 4 张默认头像 SVG + `defaultAvatar` helper；StudentAvatar 改 `<img loading=lazy decoding=async>` + `.loaded` 淡入；BannerCarousel 既有空态保留；`useToast` 新增 `errorWithRetry(action)` + `Toast.vue` 渲染按钮；`utils/network.ts` `isNetworkError` / `networkErrorMessage` 区分网络错；Admin / StudentOverlay / TeacherOverlay 上传 catch 抽函数 + 重试；App 全局 `online`/`offline` 监听挂离线 toast）
+- [x] G11 头像墙具体布局（**✅** 已采纳 spec Q-LAYOUT 方案 A'：CSS Grid 8 列 / `< 768 px` 4 列；id 哈希 ±4° / ±8 px 错位 + 主态 `★` 角标 + 高亮边）
+- [x] G11 浮层动效（**✅** 已采纳 spec Q-OVERLAY-MOTION 方案 A：移动端 Bottom Sheet 上滑；PC `≥768px` 居中卡 `scale(0.94→1)`；`prefers-reduced-motion` 仅淡入；HomeTopbar 游客 badge `pulse` + 「去登录」气泡 popover，sessionStorage `zy-guest-tip-dismissed` 记忆）
 
 ### 组 7：部署与验收（依赖：组 6）
 

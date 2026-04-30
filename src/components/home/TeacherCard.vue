@@ -17,6 +17,7 @@ import { computed } from 'vue'
 import type { TeacherFull } from '@/api/teachers'
 import { useAudioPlayer } from '@/composables/useAudioPlayer'
 import { toast } from '@/composables/useToast'
+import { defaultTeacherAvatar } from '@/utils/defaultAvatar'
 
 const props = defineProps<{
   teacher: TeacherFull
@@ -55,10 +56,8 @@ const roleLabel = computed(() => {
   }
 })
 
-const initial = computed(() => {
-  const n = props.teacher.name?.trim() ?? ''
-  return n ? Array.from(n)[0] : '老'
-})
+/** 头像 src 兜底链：上传图 → 默认 SVG（plan G11） */
+const avatarSrc = computed(() => props.teacher.avatar?.url || defaultTeacherAvatar())
 
 /** 把 60s 内的整秒转成 0:42 这种文案 */
 function fmtDuration(sec: number): string {
@@ -78,8 +77,7 @@ function fmtDuration(sec: number): string {
       :aria-label="`${roleLabel} ${teacher.name}`"
       @click="$emit('click-avatar', teacher)"
     >
-      <img v-if="teacher.avatar?.url" :src="teacher.avatar.url" :alt="teacher.name" />
-      <span v-else class="avatar-initial">{{ initial }}</span>
+      <img :src="avatarSrc" :alt="teacher.name" decoding="async" />
     </button>
 
     <div class="meta">

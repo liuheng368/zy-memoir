@@ -42,6 +42,8 @@ import { useMp3Encode } from '@/composables/useMp3Encode'
 import { useAudioPlayer } from '@/composables/useAudioPlayer'
 import { toast } from '@/composables/useToast'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import { defaultStudentAvatar } from '@/utils/defaultAvatar'
+import { isNetworkError, networkErrorMessage } from '@/utils/network'
 import {
   MAX_INTRO_LENGTH,
   MAX_RECORDING_SECONDS,
@@ -188,7 +190,12 @@ async function onAvatarPicked(e: Event): Promise<void> {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
-  if (!file || !detail.value || !token.value) return
+  if (!file) return
+  await doUploadAvatar(file)
+}
+
+async function doUploadAvatar(file: File): Promise<void> {
+  if (!detail.value || !token.value) return
   const tid = toast.loading('正在更新头像…')
   try {
     const compressed = await compressor.compress(file)
@@ -208,7 +215,14 @@ async function onAvatarPicked(e: Event): Promise<void> {
     toast.success('头像已更新')
     emit('updated')
   } catch (err) {
-    toast.error((err as Error).message || '头像上传失败')
+    const fallback = (err as Error).message || '头像上传失败'
+    if (isNetworkError(err)) {
+      toast.errorWithRetry(networkErrorMessage(err, fallback), () =>
+        doUploadAvatar(file),
+      )
+    } else {
+      toast.error(fallback)
+    }
   } finally {
     toast.dismiss(tid)
   }
@@ -240,11 +254,16 @@ async function onPhotoPicked(e: Event): Promise<void> {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
-  if (!file || !detail.value || !token.value) return
+  if (!file) return
   if (photoCount.value >= MAX_STUDENT_PHOTOS) {
     toast.error(`最多 ${MAX_STUDENT_PHOTOS} 张照片`)
     return
   }
+  await doUploadPhoto(file)
+}
+
+async function doUploadPhoto(file: File): Promise<void> {
+  if (!detail.value || !token.value) return
   const tid = toast.loading('正在上传照片…')
   try {
     const compressed = await compressor.compress(file)
@@ -264,7 +283,14 @@ async function onPhotoPicked(e: Event): Promise<void> {
     toast.success('照片已添加')
     emit('updated')
   } catch (err) {
-    toast.error((err as Error).message || '照片上传失败')
+    const fallback = (err as Error).message || '照片上传失败'
+    if (isNetworkError(err)) {
+      toast.errorWithRetry(networkErrorMessage(err, fallback), () =>
+        doUploadPhoto(file),
+      )
+    } else {
+      toast.error(fallback)
+    }
   } finally {
     toast.dismiss(tid)
   }
@@ -413,7 +439,15 @@ async function saveRecording(): Promise<void> {
     recorder.cancel()
     recordingPanelOpen.value = false
   } catch (err) {
-    toast.error((err as Error).message || '录音上传失败')
+    const fallback = (err as Error).message || '录音上传失败'
+    if (isNetworkError(err)) {
+      // 重试时 recBlob 仍在（catch 不 cancel），用户点「重试」即重走 saveRecording
+      toast.errorWithRetry(networkErrorMessage(err, fallback), () => {
+        void saveRecording()
+      })
+    } else {
+      toast.error(fallback)
+    }
   } finally {
     toast.dismiss(tid)
     recordingBusy.value = false
@@ -471,13 +505,10 @@ function recBlobKb(): string {
                 :class="[`gender-${detail.gender}`]"
               >
                 <img
-                  v-if="detail.avatar?.url"
-                  :src="detail.avatar.url"
+                  :src="detail.avatar?.url || defaultStudentAvatar(detail.gender)"
                   :alt="detail.name"
+                  decoding="async"
                 />
-                <span v-else class="avatar-initial">{{
-                  Array.from(detail.name)[0] || '生'
-                }}</span>
                 <div v-if="avatarStatus === 'uploading'" class="avatar-mask">上传中…</div>
               </div>
               <button
@@ -1120,7 +1151,11 @@ function recBlobKb(): string {
   cursor: not-allowed;
 }
 
-/* 进出动效（plan Q-OVERLAY-MOTION 默认方案 A） */
+/* 进出动效（plan Q-OVERLAY-MOTION 方案 A）
+ * 移动端：bottom sheet 上滑 + mask 淡入
+ * PC 端 (≥768px)：居中卡片 scale 收缩，避免大屏「从底部猛滑」的脱节感
+ * prefers-reduced-motion：仅淡入淡出，不做位移 / 缩放
+ */
 .overlay-fade-enter-active,
 .overlay-fade-leave-active {
   transition: opacity 0.22s ease;
@@ -1140,5 +1175,32 @@ function recBlobKb(): string {
 }
 .overlay-fade-leave-to .overlay-sheet {
   transform: translateY(16px);
+}
+
+@media (min-width: 768px) {
+  .overlay-fade-enter-active .overlay-sheet,
+  .overlay-fade-leave-active .overlay-sheet {
+    transition: transform 0.22s ease, opacity 0.22s ease;
+  }
+  .overlay-fade-enter-from .overlay-sheet {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  .overlay-fade-leave-to .overlay-sheet {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay-fade-enter-active .overlay-sheet,
+  .overlay-fade-leave-active .overlay-sheet {
+    transition: opacity 0.18s ease;
+  }
+  .overlay-fade-enter-from .overlay-sheet,
+  .overlay-fade-leave-to .overlay-sheet {
+    transform: none;
+    opacity: 0;
+  }
 }
 </style>

@@ -10,13 +10,22 @@ import { reactive } from 'vue'
 
 export type ToastType = 'success' | 'error' | 'info' | 'loading'
 
+/** Toast 上的可点动作按钮（plan G11 弱网失败 Toast + 重试） */
+export interface ToastAction {
+  label: string
+  /** 点击后回调；同步执行；调用方自行决定是否需要再 showToast 反馈 */
+  handler: () => void
+}
+
 export interface ToastItem {
   id: number
   message: string
   type: ToastType
-  /** 0 = 不自动消失（loading 默认 0） */
+  /** 0 = 不自动消失（loading 默认 0；带 action 的 error 也建议设 0 让用户看清） */
   duration: number
   createdAt: number
+  /** 可选：渲染一个内联按钮（如「重试」） */
+  action?: ToastAction
 }
 
 const MAX_VISIBLE = 3
@@ -57,6 +66,7 @@ export function showToast(
   message: string,
   type: ToastType = 'info',
   duration?: number,
+  action?: ToastAction,
 ): number {
   const id = _seq++
   const item: ToastItem = {
@@ -65,6 +75,7 @@ export function showToast(
     type,
     duration: duration ?? DEFAULT_DURATION[type],
     createdAt: Date.now(),
+    action,
   }
   state.items.push(item)
   trimExcess()
@@ -94,6 +105,12 @@ export const toast = {
   error: (msg: string, dur?: number) => showToast(msg, 'error', dur),
   info: (msg: string, dur?: number) => showToast(msg, 'info', dur),
   loading: (msg: string) => showToast(msg, 'loading'),
+  /**
+   * 失败 + 重试组合 toast（plan G11）；duration=0 不自动消失，
+   * 用户点重试 / 主动 dismiss 后才隐藏。
+   */
+  errorWithRetry: (msg: string, retry: () => void, dur = 0) =>
+    showToast(msg, 'error', dur, { label: '重试', handler: retry }),
   dismiss,
   dismissAll,
 }

@@ -14,8 +14,9 @@
  *
  * 不渲染学号（spec Q-LAYOUT 决议）
  */
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { StudentSummary } from '@/api/students'
+import { defaultStudentAvatar } from '@/utils/defaultAvatar'
 
 const props = withDefaults(
   defineProps<{
@@ -60,12 +61,27 @@ const transformStyle = computed(() => {
   }
 })
 
-const initial = computed(() => {
-  const n = props.student.name?.trim() ?? ''
-  return n ? Array.from(n)[0] : '生'
-})
+/**
+ * 头像 src 兜底链：用户上传 → 默认 SVG（按性别）。
+ * 用 `<img>` 统一渲染，避免「文字色块 / 真照片」两套渲染分支。
+ */
+const avatarSrc = computed(
+  () => props.student.avatar?.url || defaultStudentAvatar(props.student.gender),
+)
+/** 是否为默认 SVG（用于关闭淡入动画 — SVG 加载几乎瞬时） */
+const isDefault = computed(() => !props.student.avatar?.url)
 
 const genderClass = computed(() => `gender-${props.student.gender || 'unknown'}`)
+
+/** 真照片 onload 后才显形（plan G11 头像墙首屏并发优化） */
+const loaded = ref(false)
+function onImgLoad() {
+  loaded.value = true
+}
+function onImgError() {
+  // 加载失败 → fallback 到默认 SVG
+  loaded.value = true
+}
 
 const ariaLabel = computed(() => {
   const role = props.mode === 'owner' ? '（这是你）' : ''
@@ -84,8 +100,15 @@ const ariaLabel = computed(() => {
     @click="$emit('click', student)"
   >
     <div class="avatar-inner">
-      <img v-if="student.avatar?.url" :src="student.avatar.url" :alt="student.name" loading="lazy" />
-      <span v-else class="avatar-initial">{{ initial }}</span>
+      <img
+        :src="avatarSrc"
+        :alt="student.name"
+        :class="{ loaded: loaded || isDefault }"
+        loading="lazy"
+        decoding="async"
+        @load="onImgLoad"
+        @error="onImgError"
+      />
 
       <!-- 主态角标 -->
       <span v-if="mode === 'owner'" class="owner-badge" aria-hidden="true">★</span>
@@ -154,6 +177,12 @@ const ariaLabel = computed(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* 头像墙懒加载 + 渐显，避免 36 张同时切换造成抖动（plan G11） */
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+.avatar-inner img.loaded {
+  opacity: 1;
 }
 
 .owner .avatar-inner {
