@@ -1,0 +1,50 @@
+# =====================================================================
+# zy-memoir · .gitignore
+# =====================================================================
+
+# ---------- macOS ----------
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ---------- 编辑器 / IDE ----------
+.idea/
+*.swp
+*.swo
+*~
+
+# ---------- Node / pnpm（G1 起会用到）----------
+node_modules/
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------- Vite 构建产物 ----------
+dist/
+dist-ssr/
+*.local
+
+# ---------- 测试 / 覆盖率 ----------
+coverage/
+.nyc_output/
+
+# ---------- 环境变量（敏感）----------
+# 本地凭证 / 个人覆盖：永远不入仓库
+.env.local
+.env.*.local
+# 生产环境：仅在 CI 注入
+.env.production.local
+
+# ---------- CloudBase ----------
+# tcb / @cloudbase/cli 本地登录态（device-code 登录后存于 ~/.cloudbase/）
+# 仅当个别脚手架把缓存写到项目内时生效，正常情况位于用户家目录
+.cloudbase/
+.tcb-cache/
+# 云函数依赖
+cloudfunctions/**/node_modules/
+
+# ---------- 临时文件 ----------
+*.log
+*.tmp
+.cache/

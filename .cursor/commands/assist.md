@@ -43,13 +43,11 @@ description:  >-
 | **feat** | Feature **0～5** 阶段总路由 / 判阶段（无 spec → 建议 **`spec`**） | `.cursor/skills/feature/SKILL.md` |
 | **spec** | **`spec.md` + `plan.md`**；**裸 `/assist spec`**（无跟车正文）：无 **`spec.md`** → **A/B** 初始化；已有 **`spec.md`** → 验 **`prd/prd.md`**（或 `prd/` 主 md），**有则从 PRD 归纳写 `spec.md`**，无则追问；**`+` 需求描述** 走模式②改 spec；改 **`plan.md`** 需 **`@plan.md`** 或点名；**模式③** 仅当 **`/assist spec` +**（去 `@` 后）**`整理` / `整理文件` / `文件整理` / `整理一下`**，见 **`feature-doc-tidy.md`** | `.cursor/skills/spec-creator/SKILL.md` |
 | **specre** | **文档审查**（以 **`spec.md`** 为主，兼看 **`plan.md`**）：占位、**ARCH/DEV_GUIDE**、路径/接口与 plan 内 UI/Token | `.cursor/skills/spec-md-review/SKILL.md` |
-| **req** | 阶段 1 需求澄清 | `.cursor/skills/feature-requirements/SKILL.md` |
 | **plan** | 阶段 2：在 **`plan.md`** 填实现计划 / checkbox（旧版可能在 **`spec.md`**） | `.cursor/skills/feature-plan/SKILL.md` |
 | **code** | 阶段 3 实现与测试 / TDD | `.cursor/skills/feature-code/SKILL.md` |
 | **ac** | 阶段 4 对照 spec·AC 审查 | `.cursor/skills/feature-review/SKILL.md` |
 | **done** | 阶段 5 提交与收尾 / PR 说明 | `.cursor/skills/feature-commit/SKILL.md` |
 | **lint** | 独立 diff 审查（local-cr，不绑五阶段） | `.cursor/skills/local-cr/SKILL.md` |
-| **ping** | RedHi / spec·架构 webhook 推送 | `.cursor/skills/review-spec-push/SKILL.md` |
 | **env** | 环境自检 check-env | `.cursor/skills/env-check/SKILL.md` |
 
 **同义词（与上表同一 Skill）**：`tdd`→code，`cr`→lint，`apk`→ship，`dev`→emu，`specmd`/`calib`→specre。

@@ -1,0 +1,8 @@
+{
+  "total": 3,
+  "teachers": [
+    { "id": 1, "name": "刘希荷", "role": "lead" },
+    { "id": 2, "name": "陆孜颖", "role": "assistant" },
+    { "id": 3, "name": "生活老师", "role": "life" }
+  ]
+}
