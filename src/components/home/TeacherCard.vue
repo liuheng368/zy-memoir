@@ -5,24 +5,42 @@
  * 内容：
  *   - 圆形头像（缺省 → 首字符色块）
  *   - 姓名 + 角色标签（主班 / 配班 / 生活老师）
- *   - 录音条占位：圆形播放钮 + 时长 + 简短波形（本期 G3 仅 UI 占位，
- *     真实播放交给 G8 的 useAudioPlayer 互斥单例；本组件不直接 new Audio）
+ *   - 录音条：圆形播放钮 + 时长 + 简短波形；G4 起接通 useAudioPlayer 互斥单例
+ *     （同一时刻全站只 1 条录音在播；切歌时旧的自动暂停）。
  *
  * 事件：
- *   - `click-avatar` → Home.vue / 后续 G7 老师详情浮层接管（本期不做）
- *   - `play-recording` (recordingIdx) → G8 接管
+ *   - `click-avatar` → Home.vue 决定是否开启 G7 教师浮层
+ *   - `play-recording` (teacher, index) → 仍向上抛 informational，便于父级埋点
+ *     （播放本身已由本组件直接调 useAudioPlayer 完成，父级无需再处理）
  */
 import { computed } from 'vue'
 import type { TeacherFull } from '@/api/teachers'
+import { useAudioPlayer } from '@/composables/useAudioPlayer'
+import { toast } from '@/composables/useToast'
 
 const props = defineProps<{
   teacher: TeacherFull
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'click-avatar', teacher: TeacherFull): void
   (e: 'play-recording', payload: { teacher: TeacherFull; index: number }): void
 }>()
+
+const player = useAudioPlayer()
+
+async function onPlayClick(index: number, url: string): Promise<void> {
+  emit('play-recording', { teacher: props.teacher, index })
+  if (!url) {
+    toast.error('录音文件不可用')
+    return
+  }
+  try {
+    await player.toggle(url)
+  } catch {
+    toast.error('播放失败')
+  }
+}
 
 const roleLabel = computed(() => {
   switch (props.teacher.role) {
@@ -79,10 +97,11 @@ function fmtDuration(sec: number): string {
         <button
           type="button"
           class="play-btn"
-          :aria-label="`播放第 ${i + 1} 段录音 ${fmtDuration(r.duration)}`"
-          @click="$emit('play-recording', { teacher, index: i })"
+          :class="{ playing: player.isPlaying(r.url) }"
+          :aria-label="`${player.isPlaying(r.url) ? '暂停' : '播放'}第 ${i + 1} 段录音 ${fmtDuration(r.duration)}`"
+          @click="onPlayClick(i, r.url)"
         >
-          ▶
+          {{ player.isPlaying(r.url) ? '⏸' : '▶' }}
         </button>
         <span class="wave" aria-hidden="true">
           <i v-for="b in 12" :key="b" :style="{ height: 30 + ((i * 7 + b * 11) % 60) + '%' }"></i>
@@ -216,6 +235,10 @@ function fmtDuration(sec: number): string {
   align-items: center;
   justify-content: center;
   flex: 0 0 24px;
+  transition: background 0.15s ease;
+}
+.play-btn.playing {
+  background: #b03a3a;
 }
 
 .wave {

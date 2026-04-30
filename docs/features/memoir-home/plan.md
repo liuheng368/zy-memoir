@@ -975,22 +975,23 @@ interface UploadTask {
   - [x] `StudentWall.vue` + `StudentAvatar.vue`
   - [x] **✅** 头像墙具体布局：spec **Q-LAYOUT = 方案 A'**（CSS Grid `grid-auto-flow: dense` + 部分 `span 2` + 按 id 稳定哈希 ±4° 旋转 / ±8 px 平移）
   - [x] `useClassDataStore.fetchAll()` 三接口并发（`Promise.allSettled`，单段失败不阻塞其余）
-- [ ] **G6 学生浮层 `StudentOverlay.vue`**
-  - [ ] 主/客态分支（props.mode）；**游客态强制走 `visitor`**
-  - [ ] 自我介绍编辑 + 字数限制（仅 `owner`）
-  - [ ] 照片网格 + 「+」上限（仅 `owner`）
-  - [ ] 录音列表 + 「+」上限（仅 `owner`）
-  - [ ] 长按删除 + 二次确认（仅 `owner`，`visitor` 不绑定手势）
-  - [ ] mount 时若 `authStore.isGuest` 则**强制覆写** `mode='visitor'`
-- [ ] **G7 教师浮层 `TeacherOverlay.vue`**
-  - [ ] 仅主态：换头像 + 增删录音
-  - [ ] 对其他老师 / 学生 / **游客**：按 Q-TEACHER-OTHER 决议是否开放只读 `visitor`
-- [ ] **G8 上传 / 录音 composables**
-  - [ ] `useUpload`（progress / retry / 乐观 UI）
-  - [ ] `useRecorder`（MediaRecorder + 60s 倒计时 + 停止）
-  - [ ] `useImageCompress`（≤3 MB）
-  - [ ] `useMp3Encode`（lamejs）
-  - [ ] `useAudioPlayer`（全局单实例互斥）
+- [x] **G6 学生浮层 `StudentOverlay.vue`**
+  - [x] 主/客态分支（props.mode）；**游客态强制走 `visitor`**（`effectiveMode` computed 中以 role + studentId 双重校验，非本人或游客一律降为 visitor）
+  - [x] 自我介绍编辑 + 字数限制（仅 `owner`，1 s 防抖自动保存 + Toast；超 300 字飘红并阻断保存）
+  - [x] 照片网格 + 「+」上限（仅 `owner`，3 张达到时「+」按钮自动隐藏）
+  - [x] 录音列表 + 「+」上限（仅 `owner`，5 段达到时按钮自动隐藏；inline 录音面板覆盖 Bottom Sheet 底部）
+  - [x] 长按删除 + 二次确认（600 ms 长按触发 `<ConfirmDialog>`；`visitor` 不绑定 pointerdown handler）
+  - [x] mount 时若 `authStore.isGuest` 则**强制覆写** `mode='visitor'`（`effectiveMode` 在 role !== 'student' 时直接返回 visitor）
+  - [x] 头像换图（API-10 `updateStudentAvatar`；plan 阶段补建云函数）
+- [x] **G7 教师浮层 `TeacherOverlay.vue`**
+  - [x] 仅主态：换头像 + 增删录音（无自我介绍 / 无照片墙；段数不设上限，对齐 Q-PLAN-12）
+  - [x] 对其他老师 / 学生 / **游客**：按 Q-TEACHER-OTHER 默认决议**不开放**点开（Home.vue 的 `handleTeacherClick` 仅当老师本人匹配时才 push open；浮层自身也兼容 visitor 模式）
+- [x] **G8 上传 / 录音 composables**
+  - [x] `useUpload`（progress / retry / 乐观 UI）
+  - [x] `useRecorder`（MediaRecorder + 60s 倒计时 + 停止）
+  - [x] `useImageCompress`（≤3 MB）
+  - [x] `useMp3Encode`（lamejs）
+  - [x] `useAudioPlayer`（全局单实例互斥；G4 已接入 TeacherCard / StudentOverlay / TeacherOverlay 三处播放器）
 - [ ] **G9 管理员页 `Admin.vue`**
   - [ ] 路由守卫：`/admin?token=...`
   - [ ] 合影网格 + 上传 + 删除（含二次确认）
@@ -1051,11 +1052,11 @@ interface UploadTask {
 
 ### 组 4：浮层与上传 / 录音（依赖：组 3）
 
-- [ ] G6 学生浮层主 / 客态
-- [ ] G7 教师浮层主态
-- [ ] G8 `useUpload` / `useImageCompress`
-- [ ] G8 `useRecorder` + `useMp3Encode`（**⚠️** iOS Safari spike）
-- [ ] G8 `useAudioPlayer` 全局互斥
+- [x] G6 学生浮层主 / 客态（`src/components/overlays/StudentOverlay.vue`；含游客兜底 + 1 s 防抖自动存简介 + 照片 / 录音上限管控 + 长按删除 + ConfirmDialog；G4 起 10 个新云函数全量部署 + invoke 验证）
+- [x] G7 教师浮层主态（`src/components/overlays/TeacherOverlay.vue`；本人才打开 + 头像换图 + 录音增删；TeacherCard 录音条接入 useAudioPlayer 互斥）
+- [x] G8 `useUpload` / `useImageCompress`（progress / retry / 乐观 UI；`browser-image-compression` ≤ 3 MB）
+- [x] G8 `useRecorder` + `useMp3Encode`（MediaRecorder + 60 s 自动停 / `@breezystack/lamejs` 浏览器内 MP3；**⚠️** iOS Safari 真机回归留 G13）
+- [x] G8 `useAudioPlayer` 全局互斥（模块级单实例 audio + 引用计数；G4 起 TeacherCard / StudentOverlay / TeacherOverlay 三处共享）
 
 ### 组 5：管理员页（依赖：组 1 / 2）
 

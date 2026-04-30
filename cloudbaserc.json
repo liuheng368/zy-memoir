@@ -77,6 +77,103 @@
               "runtime": "Nodejs18.15",
               "memorySize": 128,
               "timeout": 5
+            },
+            {
+              "name": "getStudentDetail",
+              "$comment": "G4 / API-8: 公开只读，按 id 返回完整学生详情（intro/photos/recordings 全字段）",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5
+            },
+            {
+              "name": "updateStudentIntro",
+              "$comment": "G4 / API-9: 学生简介保存（≤ 300 字，HMAC 校验 role=student/admin）",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 studentLogin 共用同一密钥"
+              }
+            },
+            {
+              "name": "addStudentPhoto",
+              "$comment": "G4 / API-10: 学生新增照片（≤ 3 张，HMAC 校验）",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 studentLogin 共用同一密钥"
+              }
+            },
+            {
+              "name": "removeStudentPhoto",
+              "$comment": "G4 / API-11: 学生删除照片（HMAC 校验 + COS 清理）",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 studentLogin 共用同一密钥"
+              }
+            },
+            {
+              "name": "updateStudentAvatar",
+              "$comment": "G4 / API-10: 学生换头像（仅本人，HMAC 校验 + 旧 COS 清理）",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 studentLogin 共用同一密钥"
+              }
+            },
+            {
+              "name": "addStudentRecording",
+              "$comment": "G4 / API-13: 学生新增录音（≤ 5 段、单段 ≤ 60 s，HMAC 校验）",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 studentLogin 共用同一密钥"
+              }
+            },
+            {
+              "name": "removeStudentRecording",
+              "$comment": "G4 / API-14: 学生删除录音（HMAC 校验 + COS 清理）",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 studentLogin 共用同一密钥"
+              }
+            },
+            {
+              "name": "updateTeacherAvatar",
+              "$comment": "G4 / API-15: 老师换头像（仅本人，HMAC 校验 + 旧 COS 清理）",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 teacherLogin 共用同一密钥"
+              }
+            },
+            {
+              "name": "addTeacherRecording",
+              "$comment": "G4 / API-16: 老师新增录音（PRD 不限段数 / 单段 ≤ 60 s，HMAC 校验）",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 teacherLogin 共用同一密钥"
+              }
+            },
+            {
+              "name": "removeTeacherRecording",
+              "$comment": "G4 / API-17: 老师删除录音（HMAC 校验 + COS 清理）",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 teacherLogin 共用同一密钥"
+              }
             }
           ]
         }

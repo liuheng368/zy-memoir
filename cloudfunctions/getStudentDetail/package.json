@@ -1,0 +1,9 @@
+{
+  "name": "getStudentDetail",
+  "version": "1.0.0",
+  "description": "plan API-8 拉取学生浮层详情（公开只读）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.13.0"
+  }
+}

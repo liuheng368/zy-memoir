@@ -1,15 +1,20 @@
 /**
- * src/api/students.ts — 学生数据 API（主页学生头像墙 / 学生详情聚合）
+ * src/api/students.ts — 学生数据 API（主页头像墙 / 学生浮层 + G4 学生侧写入闭环）
  *
- * 与云函数 `cloudfunctions/listStudents` 的契约：
- *   出参：{ ok, code: 'LIST_OK', data: { students: StudentSummary[] } }
+ * 与云函数契约：
+ *   - listStudents (公开只读)            → 主页头像墙精简字段 + 派生 photoCount/recordingCount
+ *   - getStudentDetail (公开只读)        → 学生浮层完整 schema (intro/avatar/photos/recordings)
+ *   - updateStudentIntro (HMAC)          → 学生简介保存（≤ 300 字）
+ *   - addStudentPhoto (HMAC)             → 学生新增照片（≤ 3 张）
+ *   - removeStudentPhoto (HMAC + COS 清理) → 删除指定 photo
+ *   - addStudentRecording (HMAC)         → 学生新增录音（≤ 5 段、单段 ≤ 60 s）
+ *   - removeStudentRecording (HMAC + COS 清理) → 删除指定 recording
  *
- * 设计取舍：
- * - 主页仅需精简字段 + 派生计数（photoCount / recordingCount），
- *   云函数侧已从 photos.length / recordings.length 派生（schema 升级后无须改前端）。
- * - 学生详情（含 photos / recordings 大字段）走另一个云函数（G7 实现），不在本文件暴露。
+ * 上传职责拆分：
+ * - 文件上传 / 压缩 / 编码 全部走 src/composables/useUpload + useImageCompress + useMp3Encode；
+ *   这里的 add* 接口只接 `{ fileID, url, ... }`，不直接吃 File。
  *
- * Plan 对应：API-7、M-④（学生头像墙）。
+ * Plan 对应：API-7 / API-8 / API-9 / API-10 / API-11 / API-13 / API-14；M-④（学生头像墙）+ G6 浮层。
  */
 import { callFunction } from './cloudbase'
 
@@ -48,6 +53,24 @@ export interface AvatarRef {
   fileID?: string
 }
 
+/** 照片条引用（schema 与云函数 addStudentPhoto 一致） */
+export interface PhotoRef {
+  id: string
+  fileID: string
+  url: string
+  createdAt: number
+}
+
+/** 学生录音条引用（与 src/api/teachers.ts → RecordingRef 字段一致） */
+export interface StudentRecordingRef {
+  id: string
+  fileID: string
+  url: string
+  /** 录音时长（秒），plan 约束 ≤ 60 s */
+  duration: number
+  createdAt: number
+}
+
 /** 主页头像墙的精简学生记录 */
 export interface StudentSummary {
   id: number
@@ -58,7 +81,101 @@ export interface StudentSummary {
   avatar?: AvatarRef
 }
 
+/** 学生浮层完整记录（getStudentDetail 返回） */
+export interface StudentDetail {
+  id: number
+  name: string
+  gender: 'male' | 'female' | 'unknown'
+  intro: string
+  avatar: AvatarRef | null
+  photos: PhotoRef[]
+  recordings: StudentRecordingRef[]
+  updatedAt: string | number | null
+}
+
 export async function listStudents(): Promise<StudentSummary[]> {
   const res = await callFunction<CloudFnResponse<{ students: StudentSummary[] }>>('listStudents')
   return unwrap(res).students
+}
+
+export async function getStudentDetail(studentId: number): Promise<StudentDetail> {
+  const res = await callFunction<CloudFnResponse<{ student: StudentDetail }>>(
+    'getStudentDetail',
+    { studentId },
+  )
+  return unwrap(res).student
+}
+
+/* ------- 写入接口（均需透传 token；调用方从 useAuthStore().token 取） ------- */
+
+export async function updateStudentIntro(input: {
+  token: string
+  intro: string
+  /** admin 代写学生时使用；学生本人传自己的 id 也可（云函数会按 payload 兜底） */
+  studentId?: number
+}): Promise<{ intro: string }> {
+  const res = await callFunction<CloudFnResponse<{ intro: string }>>('updateStudentIntro', input)
+  return unwrap(res)
+}
+
+export async function updateStudentAvatar(input: {
+  token: string
+  fileID: string
+  url?: string
+  studentId?: number
+}): Promise<{ avatar: AvatarRef }> {
+  const res = await callFunction<CloudFnResponse<{ avatar: AvatarRef }>>(
+    'updateStudentAvatar',
+    input,
+  )
+  return unwrap(res)
+}
+
+export async function addStudentPhoto(input: {
+  token: string
+  fileID: string
+  url?: string
+  studentId?: number
+}): Promise<{ photo: PhotoRef; photos: PhotoRef[] }> {
+  const res = await callFunction<CloudFnResponse<{ photo: PhotoRef; photos: PhotoRef[] }>>(
+    'addStudentPhoto',
+    input,
+  )
+  return unwrap(res)
+}
+
+export async function removeStudentPhoto(input: {
+  token: string
+  photoId: string
+  studentId?: number
+}): Promise<{ photoId: string; photos: PhotoRef[] }> {
+  const res = await callFunction<CloudFnResponse<{ photoId: string; photos: PhotoRef[] }>>(
+    'removeStudentPhoto',
+    input,
+  )
+  return unwrap(res)
+}
+
+export async function addStudentRecording(input: {
+  token: string
+  fileID: string
+  url?: string
+  duration: number
+  studentId?: number
+}): Promise<{ recording: StudentRecordingRef; recordings: StudentRecordingRef[] }> {
+  const res = await callFunction<
+    CloudFnResponse<{ recording: StudentRecordingRef; recordings: StudentRecordingRef[] }>
+  >('addStudentRecording', input)
+  return unwrap(res)
+}
+
+export async function removeStudentRecording(input: {
+  token: string
+  recordingId: string
+  studentId?: number
+}): Promise<{ recordingId: string; recordings: StudentRecordingRef[] }> {
+  const res = await callFunction<
+    CloudFnResponse<{ recordingId: string; recordings: StudentRecordingRef[] }>
+  >('removeStudentRecording', input)
+  return unwrap(res)
 }

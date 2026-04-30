@@ -1,0 +1,9 @@
+{
+  "name": "addStudentRecording",
+  "version": "1.0.0",
+  "description": "plan API-13 新增学生录音（HMAC 校验 + ≤5 段 / ≤60 s 兜底）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.13.0"
+  }
+}

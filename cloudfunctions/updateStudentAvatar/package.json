@@ -1,0 +1,9 @@
+{
+  "name": "updateStudentAvatar",
+  "version": "1.0.0",
+  "description": "plan API-10 学生换头像（HMAC 校验 + 旧 COS 清理）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.13.0"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "addTeacherRecording",
+  "version": "1.0.0",
+  "description": "plan API-16 新增老师录音（HMAC 校验 + 单段 ≤ 60 s）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.13.0"
+  }
+}

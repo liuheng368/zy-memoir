@@ -19,7 +19,9 @@
     "format": "prettier --write \"src/**/*.{ts,vue,json,css,md}\""
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@cloudbase/js-sdk": "^2.10.0",
+    "browser-image-compression": "^2.0.2",
     "pinia": "^2.2.4",
     "vue": "^3.5.13",
     "vue-router": "^4.4.5"
