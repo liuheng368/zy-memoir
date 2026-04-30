@@ -1,0 +1,9 @@
+{
+  "name": "removeBanner",
+  "version": "1.0.0",
+  "description": "plan API-20 管理员删除合影（admin HMAC 校验 + COS 清理）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.13.0"
+  }
+}

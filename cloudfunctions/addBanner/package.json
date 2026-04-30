@@ -1,0 +1,9 @@
+{
+  "name": "addBanner",
+  "version": "1.0.0",
+  "description": "plan API-19 管理员上传合影（admin HMAC 校验）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.13.0"
+  }
+}

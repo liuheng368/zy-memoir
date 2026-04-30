@@ -1,50 +1,82 @@
 /**
- * src/api/banners.ts — 主页合影轮播 API（plan API-5）
+ * src/api/banners.ts — 主页合影轮播 API（plan API-5 / API-19 / API-20）
  *
- * 当前阶段（G3）：banners 集合尚未创建，先返回 mock 占位数据；
- * G7 上线管理员合影管理时切换为真实 `db.collection('banners').get()` 或
- * `cloudfunctions/listBanners`。
+ * G5 起切真接口（云函数 listBanners / addBanner / removeBanner，HMAC 走 ADMIN_HMAC_KEY）。
  *
- * 切换契约：返回值类型保持 `Banner[]`，调用方 `BannerCarousel.vue` 不需要改。
+ * 与云函数契约：
+ *   - listBanners (公开只读)            → 主页 / Admin 共用，按 createdAt desc，URL 现场刷新
+ *   - addBanner (admin HMAC)            → 管理员上传新合影
+ *   - removeBanner (admin HMAC + COS)   → 管理员删除（同步清理 COS 文件）
  *
- * Mock 数据来源：picsum.photos —— 公共占位图床，URL 稳定可缓存；
- * 若 picsum 不可用，BannerCarousel 仍会回落到「敬请期待班级合影」空态。
+ * 上传职责拆分：业务方先 useImageCompress + useUpload 拿到 fileID + url，
+ * 这里 addBanner 只接 `{ fileID, url, caption? }`，不直接吃 File。
  */
+import { callFunction } from './cloudbase'
 
-export interface Banner {
-  id: string
-  url: string
-  /** 可选标题（spec / plan 暂未定义；预留） */
-  caption?: string
-  /** 可选发布时间（占位用） */
-  createdAt?: number
+interface CloudFnResponse<T> {
+  ok: boolean
+  code: string
+  message?: string
+  data?: T
 }
 
-const MOCK_BANNERS: Banner[] = [
-  {
-    id: 'mock-1',
-    url: 'https://picsum.photos/seed/zy-memoir-banner-1/1200/600',
-    caption: '占位合影 · 2024 春',
-  },
-  {
-    id: 'mock-2',
-    url: 'https://picsum.photos/seed/zy-memoir-banner-2/1200/600',
-    caption: '占位合影 · 2024 秋',
-  },
-  {
-    id: 'mock-3',
-    url: 'https://picsum.photos/seed/zy-memoir-banner-3/1200/600',
-    caption: '占位合影 · 2025 毕业',
-  },
-]
+export class BannerApiError extends Error {
+  code: string
+  raw: CloudFnResponse<unknown>
+  constructor(raw: CloudFnResponse<unknown>) {
+    super(raw.message || raw.code || 'banners api error')
+    this.code = raw.code || 'UNKNOWN'
+    this.raw = raw
+    this.name = 'BannerApiError'
+  }
+}
 
-/**
- * 返回主页轮播图列表（按时间倒序，本期 mock）。
- *
- * 当前实现：直接返回 MOCK_BANNERS 拷贝；后期切真接口时改为调用云函数 / db。
- */
+function unwrap<T>(res: CloudFnResponse<T>): T {
+  if (!res || res.ok !== true) {
+    throw new BannerApiError(res ?? { ok: false, code: 'UNKNOWN', message: 'empty response' })
+  }
+  if (res.data === undefined) {
+    throw new BannerApiError({ ...res, message: 'response.data missing' })
+  }
+  return res.data
+}
+
+/** 合影记录（与 cloudfunctions/listBanners 返回 schema 一致） */
+export interface Banner {
+  id: string
+  fileID: string
+  url: string
+  caption?: string
+  createdAt?: number
+  /** 默认 'admin'（仅管理员可写入） */
+  uploadedBy?: string
+}
+
 export async function listBanners(): Promise<Banner[]> {
-  // 用 microtask 模拟异步，避免调用方误以为同步并破坏 loading 流程
-  await Promise.resolve()
-  return MOCK_BANNERS.slice()
+  const res = await callFunction<CloudFnResponse<{ banners: Banner[] }>>('listBanners')
+  return unwrap(res).banners
+}
+
+/* ------- 写入接口（均需透传 admin token；调用方从 useAuthStore().token 取） ------- */
+
+export interface AddBannerInput {
+  token: string
+  fileID: string
+  url?: string
+  caption?: string
+}
+
+export async function addBanner(input: AddBannerInput): Promise<{ banner: Banner }> {
+  const res = await callFunction<CloudFnResponse<{ banner: Banner }>>('addBanner', input)
+  return unwrap(res)
+}
+
+export interface RemoveBannerInput {
+  token: string
+  bannerId: string
+}
+
+export async function removeBanner(input: RemoveBannerInput): Promise<{ bannerId: string }> {
+  const res = await callFunction<CloudFnResponse<{ bannerId: string }>>('removeBanner', input)
+  return unwrap(res)
 }

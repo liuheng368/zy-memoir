@@ -992,9 +992,9 @@ interface UploadTask {
   - [x] `useImageCompress`（≤3 MB）
   - [x] `useMp3Encode`（lamejs）
   - [x] `useAudioPlayer`（全局单实例互斥；G4 已接入 TeacherCard / StudentOverlay / TeacherOverlay 三处播放器）
-- [ ] **G9 管理员页 `Admin.vue`**
-  - [ ] 路由守卫：`/admin?token=...`
-  - [ ] 合影网格 + 上传 + 删除（含二次确认）
+- [x] **G9 管理员页 `Admin.vue`**
+  - [x] 路由守卫：`/admin?token=...`
+  - [x] 合影网格 + 上传 + 删除（含二次确认）
 - [ ] **G10 共用弹层与 Toast**
   - [ ] `Toast.vue`、`ConfirmDialog.vue`、`UploadModal.vue`、`RecordModal.vue`
 - [ ] **G11 视觉打磨与边界**
@@ -1060,8 +1060,8 @@ interface UploadTask {
 
 ### 组 5：管理员页（依赖：组 1 / 2）
 
-- [ ] G9 `Admin.vue` + 合影网格
-- [ ] G9 上传 + 删除（含二次确认）
+- [x] G9 `Admin.vue` + 合影网格（云函数 `listBanners` 公开只读 + 现场 `getTempFileURL` 刷新；admin 校验通过后由 `useClassDataStore.fetchBanners` 灌数据，3 列 grid + 空 / loading / error 三态）
+- [x] G9 上传 + 删除（含二次确认）（`useImageCompress` ≤ 3 MB → `useUpload` cloudPath `banners/<yyyy-MM>/<uuid>.<ext>` → `addBanner({token,fileID,url,caption?})`；删除走 `<ConfirmDialog>` + `removeBanner({token,bannerId})`，云函数同步 `app.deleteFile`；admin HMAC 走 `ADMIN_HMAC_KEY` 与学生 / 老师独立轮换）
 
 ### 组 6：视觉打磨与边界（依赖：所有上面）
 
