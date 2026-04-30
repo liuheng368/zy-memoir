@@ -968,13 +968,13 @@ interface UploadTask {
   - [x] 「↪ 跳过登录，仅浏览」入口 → 调 `auth.skipToGuest()`，关闭浮层落到 `/`（**Q-PLAN-15**）
   - [x] 视觉规范：弱化样式（文本按钮 + 左侧返回箭头 icon），与「进入」主按钮拉开层级
   - [x] **不**包含「我是老师 / 我是学生」反向跳转链接（**v0.3 Q-PLAN-17 决议**）
-- [ ] **G5 主页 `Home.vue` & 子组件**
-  - [ ] `HomeTopbar.vue`（含 ⚙ 入口可见性、退出登录）
-  - [ ] `BannerCarousel.vue`（自动 + 手动切换、空态、点击放大开关）
-  - [ ] `TeacherSection.vue` + `TeacherCard.vue` + `RecordingList`
-  - [ ] `StudentWall.vue` + `StudentAvatar.vue`
-  - [ ] **⚠️** 头像墙具体布局待 spec **Q-LAYOUT** + 设计稿
-  - [ ] `classDataStore.fetchAll()` 三接口并发
+- [x] **G5 主页 `Home.vue` & 子组件**
+  - [x] `HomeTopbar.vue`（含 ⚙ 入口可见性、退出登录）
+  - [x] `BannerCarousel.vue`（自动 + 手动切换、空态；**点击放大开关**待 Q-BANNER-ZOOM 决议，当前未实装）
+  - [x] `TeacherSection.vue` + `TeacherCard.vue` + 录音条占位（**RecordingList** 复用单文件内联，未拆独立组件）
+  - [x] `StudentWall.vue` + `StudentAvatar.vue`
+  - [x] **✅** 头像墙具体布局：spec **Q-LAYOUT = 方案 A'**（CSS Grid `grid-auto-flow: dense` + 部分 `span 2` + 按 id 稳定哈希 ±4° 旋转 / ±8 px 平移）
+  - [x] `useClassDataStore.fetchAll()` 三接口并发（`Promise.allSettled`，单段失败不阻塞其余）
 - [ ] **G6 学生浮层 `StudentOverlay.vue`**
   - [ ] 主/客态分支（props.mode）；**游客态强制走 `visitor`**
   - [ ] 自我介绍编辑 + 字数限制（仅 `owner`）
@@ -1044,10 +1044,10 @@ interface UploadTask {
 
 ### 组 3：主页骨架与数据层（依赖：组 1 / 2）
 
-- [ ] G5 `HomeTopbar` + `BannerCarousel`（先用 mock 数据）
-- [ ] G5 `TeacherSection` + `TeacherCard`
-- [ ] G5 `StudentWall` + `StudentAvatar`（**⚠️** 布局占位）
-- [ ] G5 `classDataStore.fetchAll()` 三接口并发
+- [x] G5 `HomeTopbar` + `BannerCarousel`（banners 先用 mock；G7 切真接口；自动轮播 4 s + 手动 + 圆点）
+- [x] G5 `TeacherSection` + `TeacherCard`（含录音条占位 + 主班/配班/生活老师徽标；新增云函数 `listTeachers` 已扩展返回 avatar/recordings）
+- [x] G5 `StudentWall` + `StudentAvatar`（**✅** 采用 spec Q6 方案 A'：8 列 / < 768 px 4 列；id 哈希 ±4° / ±8 px；主态 `★` 角标 + 高亮边）
+- [x] G5 `useClassDataStore.fetchAll()` 三接口并发（students/teachers/banners；`Promise.allSettled`；新增云函数 `listStudents` 已部署 → invoke 返 36 学生）
 
 ### 组 4：浮层与上传 / 录音（依赖：组 3）
 

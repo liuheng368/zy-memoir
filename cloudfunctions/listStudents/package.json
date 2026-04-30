@@ -1,0 +1,9 @@
+{
+  "name": "listStudents",
+  "version": "1.0.0",
+  "description": "钟园 2024 大二班 · 主页学生头像墙名单（公开只读，精简字段 + 派生计数）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.0.0"
+  }
+}

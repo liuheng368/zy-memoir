@@ -66,7 +66,14 @@
             },
             {
               "name": "listTeachers",
-              "$comment": "G2 / Q-PLAN-20: 进入 /teacher 时供老师下拉名单使用，只查 teachers 集合 id/name/role 字段",
+              "$comment": "G2 / Q-PLAN-20: 双用 — /teacher 下拉名单 + 主页老师风采区（API-6）；返回 id/name/role/avatar?/recordings",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5
+            },
+            {
+              "name": "listStudents",
+              "$comment": "G3 / API-7: 主页学生头像墙；返回 students 集合精简字段 + 派生 photoCount/recordingCount",
               "runtime": "Nodejs18.15",
               "memorySize": 128,
               "timeout": 5
