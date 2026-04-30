@@ -1086,6 +1086,12 @@ interface UploadTask {
 
 <!-- 阶段 4 填写：实现计划全部 [x] 后 -->
 
-- **结论**：待审查
+- **结论**：通过
 - **严重问题**：无
 - **备注**：
+  - 14 项 G 全部 [x]，AC-1~AC-18 中 16 项代码 ↔ AC 完全对齐；HMAC token 走 `crypto.timingSafeEqual` 比较（[`verifyToken`](cloudfunctions/_shared/hmac.js)）；11 个写云函数入口统一 `verifyToken` + `payload.role` 白名单（G14 后端兜底落实，样本见 [`addStudentRecording`](cloudfunctions/addStudentRecording/index.js:51-58) / [`addBanner`](cloudfunctions/addBanner/index.js:48-53)）；[`StudentOverlay.vue`](src/components/overlays/StudentOverlay.vue:80-85) `effectiveMode` 三重判定保证 deeplink `?mode=owner` 必降级；[`scripts/backup.mjs`](scripts/backup.mjs) `daysLeft <= 30` 非零退出提醒切 P1；[`useAudioPlayer`](src/composables/useAudioPlayer.ts) 模块级单例互斥 + [`useRecorder`](src/composables/useRecorder.ts) 60s 自动停止。
+  - **MEDIUM-1**（建议跟踪）：[`StudentLogin.vue`](src/views/StudentLogin.vue:43-71) `handleSubmit` 仅在 success 路径清 `studentIdInput / nameInput`，**catch 分支未清空输入框**，与 spec AC-2 反例「输入框被清空」存在偏差。修复方式二选一：① `catch` 分支补 `studentIdInput.value = ''; nameInput.value = ''`；② 更新 [`AC-CHECKLIST.md`](docs/features/memoir-home/AC-CHECKLIST.md) AC-2.2 收紧口径为「保留输入便于修正」并同步 spec。
+  - **MEDIUM-2**（建议跟踪）：[`StudentLogin.vue`](src/views/StudentLogin.vue) / [`TeacherLogin.vue`](src/views/TeacherLogin.vue) 失败提示落地为 `<p class="error" role="alert">` 行内提示（与本 plan G4a/G4b 「失败行内错误提示」决议一致），但 spec AC-2/AC-3 文字仍写 "Toast"。建议确认以**行内提示**为正式决议，并同步 spec / AC-CHECKLIST 表述。
+  - **LOW-1**：登录浮层（StudentLogin / TeacherLogin）仅用 `opacity` Transition，未实现 G11 / Q-OVERLAY-MOTION 决议的 PC `scale(0.94→1)` + 移动端 Bottom Sheet。考虑到 Q-OVERLAY-MOTION 主要面向交互浮层（[`StudentOverlay`](src/components/overlays/StudentOverlay.vue) / [`TeacherOverlay`](src/components/overlays/TeacherOverlay.vue) 已正确落地），建议在 plan 显式追加「登录浮层沿用居中卡 + opacity，不参与 Q-OVERLAY-MOTION」作为补充决议。
+  - **LOW-2**：[`StudentLogin.vue`](src/views/StudentLogin.vue) `ERROR_TEXT.INVALID_INPUT = '请检查学号与姓名'` 与 spec 反例文案 "学号或姓名错误" 存在轻微漂移，建议二者择一统一。
+  - 用户接受上述 2 MEDIUM + 2 LOW 不阻塞合入后，可执行 `/assist done` 进入阶段 5。
