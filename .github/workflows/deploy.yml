@@ -1,0 +1,104 @@
+name: deploy-cloudbase
+
+# 触发：push 到 main + 手动触发；通过 paths 过滤跳过纯文档改动以省 CI 配额
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'cloudfunctions/**'
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'tsconfig*.json'
+      - 'cloudbaserc.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'scripts/ci-inject-fn-env.mjs'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '部署范围'
+        type: choice
+        options: [all, client, functions]
+        default: all
+
+# 同一分支正在跑的部署被新提交挤掉，避免 race
+concurrency:
+  group: deploy-cloudbase-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Build static site
+        run: pnpm build-only
+        env:
+          VITE_TCB_ENV_ID: zy-memoir-d5gaxbvyxe80564f4
+
+      # CI 专用：把 cloudbaserc.json 中 envVariables 占位符替换成真实 HMAC
+      # 仅修改 workspace 临时副本，不写回仓库；本地不会执行此步
+      - name: Inject HMAC envs into cloudbaserc.json (CI only)
+        if: github.event.inputs.mode != 'client'
+        run: node scripts/ci-inject-fn-env.mjs
+        env:
+          AUTH_HMAC_KEY: ${{ secrets.AUTH_HMAC_KEY }}
+          ADMIN_HMAC_KEY: ${{ secrets.ADMIN_HMAC_KEY }}
+
+      - name: Deploy to CloudBase (full)
+        if: github.event.inputs.mode == '' || github.event.inputs.mode == 'all'
+        uses: TencentCloudBase/cloudbase-action@v2
+        with:
+          secretId: ${{ secrets.TENCENT_SECRET_ID }}
+          secretKey: ${{ secrets.TENCENT_SECRET_KEY }}
+          envId: zy-memoir-d5gaxbvyxe80564f4
+          commands: |
+            framework deploy
+
+      - name: Deploy to CloudBase (only static site)
+        if: github.event.inputs.mode == 'client'
+        uses: TencentCloudBase/cloudbase-action@v2
+        with:
+          secretId: ${{ secrets.TENCENT_SECRET_ID }}
+          secretKey: ${{ secrets.TENCENT_SECRET_KEY }}
+          envId: zy-memoir-d5gaxbvyxe80564f4
+          commands: |
+            framework deploy --only client
+
+      - name: Deploy to CloudBase (only functions)
+        if: github.event.inputs.mode == 'functions'
+        uses: TencentCloudBase/cloudbase-action@v2
+        with:
+          secretId: ${{ secrets.TENCENT_SECRET_ID }}
+          secretKey: ${{ secrets.TENCENT_SECRET_KEY }}
+          envId: zy-memoir-d5gaxbvyxe80564f4
+          commands: |
+            framework deploy --only functions
+
+      - name: Done
+        run: |
+          echo "✅ 部署完成。默认托管域名："
+          echo "   https://zy-memoir-d5gaxbvyxe80564f4.tcloudbaseapp.com/"
