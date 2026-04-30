@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-ssr
+coverage
+pnpm-lock.yaml
+.cloudbase
+cloudfunctions/**/node_modules
+docs
+data
+.cursor
+.agents

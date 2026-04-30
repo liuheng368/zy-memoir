@@ -1,0 +1,9 @@
+{
+  "name": "seedTeachers",
+  "version": "1.0.0",
+  "description": "钟园 2024 大二班 · 从 COS 真源拉老师名单种入 teachers 集合",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.0.0"
+  }
+}

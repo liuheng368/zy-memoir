@@ -758,14 +758,39 @@ interface UploadTask {
 
 - [x] **角色枚举**：在 `Role` 中新增 `'guest'`，`AuthState.guestPersist: 'session' | 'local' | 'none'` ✅
 - [x] **UI 降级统一收敛在浮层 `mode` props**：`mode='visitor'` 同时承载"客态 + 游客态"，避免组件内分散判断 ✅
-- [ ] **持久化方案**：
-  - **方案 A**：`guestPersist='none'`，刷新后再次弹登录浮层（默认推荐） ⚠️
-  - **方案 B**：`guestPersist='session'`，本会话内不再弹 ⚠️
-  - **方案 C**：`guestPersist='local'`，本设备永久免弹（家长场景方便） ⚠️
-- [ ] **后端兜底**（**强制**）：所有 `addStudent* / addTeacher* / addBanner / removeBanner / updateStudentIntro` 云函数必须基于 token / 角色校验，**游客无 token 直接 401**；前端 `mode=visitor` 仅是 UI 隐藏，不可作为安全边界 ⚠️
-- [ ] **顶栏「去登录」入口**：`UserBadge` 在 `role==='guest'` 时显示「去登录」按钮，调用 `auth.openLoginPanel()` ⚠️
-- [ ] **Deeplink 兜底**：`StudentOverlay` / `TeacherOverlay` 在挂载时若 `authStore.role === 'guest'` 强制覆写 `mode='visitor'`，忽略外部传入 ⚠️
-- [ ] **`/admin` 与游客互斥**：`/admin` 路由守卫不允许 `role==='guest'` 通过；token 校验失败仍跳 `/login`，不自动转游客 ⚠️
+- [x] **持久化方案**（与 spec Q17 联动 → **方案 B `session`**）：
+  - [ ] 方案 A：`guestPersist='none'`，刷新后再次弹登录浮层 ⚠️
+  - [x] **方案 B（已采纳）**：`guestPersist='session'`，sessionStorage 记住"本次会话游客"，本会话内不再弹 ✅
+  - [ ] 方案 C：`guestPersist='local'`，本设备永久免弹（家长场景方便） ⚠️
+- [x] **后端兜底**（**强制**）：所有 `addStudent* / addTeacher* / addBanner / removeBanner / updateStudentIntro` 云函数必须基于 token / 角色校验，**游客无 token 直接 401**；前端 `mode=visitor` 仅是 UI 隐藏，不可作为安全边界 ✅（实现挂在 G14 强制项）
+- [ ] **顶栏「去登录」入口**：`UserBadge` 在 `role==='guest'` 时显示「去登录」按钮，调用 `auth.openLoginPanel()` ⚠️（实现挂在 G11 视觉打磨）
+- [x] **Deeplink 兜底**：`StudentOverlay` / `TeacherOverlay` 在挂载时若 `authStore.role === 'guest'` 强制覆写 `mode='visitor'`，忽略外部传入 ✅（实现挂在 G6 / G7）
+- [x] **`/admin` 与游客互斥**：`/admin` 路由守卫不允许 `role==='guest'` 通过；token 校验失败仍跳 `/`，不自动转游客 ✅（已落在 [`src/router/index.ts`](../../../src/router/index.ts)）
+
+#### Q-PLAN-18：管理员 token 方案（**v0.4 决议** · 收敛 Q-PLAN-14 / spec Q-ADMIN-AUTH）
+
+- [ ] 方案 A：写死在云函数白名单的固定 token（最简，但泄露=永久失守） ⚠️
+- [ ] 方案 B：一次性签发短期 token（需要后端会话 / 缓存层） ⚠️
+- [x] **方案 C（已采纳）**：**HMAC(env-key, ts) 防伪 token**，URL 形如 `/admin?token=<ts>.<hex>`，云函数 `adminCheck` 用环境变量 `ADMIN_HMAC_KEY` 校验，过期阈值默认 30 天滚动；新增管理员只需用 `scripts/sign-admin-token.mjs` 重新签 ✅
+- **取舍记录**：方案 C 兼顾"无后端会话"与"链接可吊销"——只要换 `ADMIN_HMAC_KEY`，所有旧 token 立即失效；过期阈值会写在云函数侧，前端不可绕过。脚本 `scripts/sign-admin-token.mjs` 列入 G12 部署交付物。
+
+#### Q-PLAN-19：学生 / 老师登录校验路径（**v0.4 决议**）
+
+- [x] **方案 A（已采纳）**：**云函数主校验** —— 前端只做基本非空 / 长度校验，提交直接调云函数 `studentLogin` / `teacherLogin`，云函数比对 CloudBase DB（由 `seedStudents` 从 `data/2024_02_*.json` 种入）后返回 `{ok, profile, token?}` ✅
+- [ ] 方案 B：前端先匹配本地 `data/2024_02_student_list.json` 再调云函数确认（双层 + 减少一次失败请求） ⚠️
+- **取舍记录**：方案 A 让"名单真源"只有云端 DB 一份，避免前端 bundle 与 DB 不一致；前端只持有"backup 列表"用于显示老师下拉 / 错误提示文案，不参与鉴权决策。
+
+#### Q-PLAN-20：名单种子源（**v0.4 决议** · 修正旧 `kindergarten_students_en_keys.json` 叙述；与 [`data/README.md`](../../../data/README.md) 数据流对齐）
+
+- [ ] 旧叙述：`src/assets/data/kindergarten_students_en_keys.json` ⚠️（v0.4 已废弃，仓库内不存在该文件）
+- [ ] 备选：把 `data/2024_02_*.json` 复制到 `src/assets/data/` 作为前端 backup ⚠️（与 [`data/README.md`](../../../data/README.md) 「本目录文件不直接被前端引用」冲突，**已否**）
+- [x] **当前真源**（已采纳）：**COS fileID** = `cloud://zy-memoir-d5gaxbvyxe80564f4.7a79-zy-memoir-d5gaxbvyxe80564f4-1306797866/2024_02_{student,teacher}_list.json`；本地 `data/2024_02_*.json` 仅作 backup（防误删）。**`seedStudents` / `seedTeachers` 云函数用 `cloudbase.downloadFile({fileID})` 从 COS 拉名单 → `db.collection().add()` 写库；前端只通过 `db.collection().get()` / 登录云函数访问，不导入本地 JSON** ✅
+- **执行约定**：① 名单变更：先改 `data/*.json` → `cloudbase.manageStorage action=upload` 推到 COS → 重跑 `seedStudents` / `seedTeachers`；② 老师登录浮层下拉数据：进入 `/teacher` 时单次调 `listTeachers` 云函数（或 `db.collection('teachers').get()`）。
+
+#### Q-PLAN-21：组 2 浮层范围（**v0.4 决议**）
+
+- [x] **已采纳**：组 2 浮层只做"功能跑通"——表单 + 校验 + 调云函数 + 跳转；**动效（Bottom Sheet 弹出 / 淡出 / PC 居中过渡）整体留到 G11 / spec Q-OVERLAY-MOTION 收敛后再补** ✅
+- **取舍记录**：spec Q-OVERLAY-MOTION 仍 ⚠️ 未收敛，强行做动效会产生返工；先把功能链路 + 持久化跑顺，G11 再统一接入设计稿动效。
 
 ---
 
@@ -913,36 +938,36 @@ interface UploadTask {
 
 > 顶层按 **目录 / Screen** 聚类（与「技术方案 · 文件改动清单」对应）；子项拆 **UI 区块**（顶栏、轮播、老师区、头像墙、浮层…）、逻辑、联调；依赖 spec / 设计未闭环的条目标 **`⚠️`**；与「实现计划」组内 checkbox 互链。
 
-- [ ] **G1 工程脚手架**
-  - [ ] `package.json` + `pnpm install`
-  - [ ] `vite.config.ts` / `tsconfig.json` / `index.html`
-  - [ ] ESLint + Prettier + 提交钩子
+- [x] **G1 工程脚手架**
+  - [x] `package.json` + `pnpm install`
+  - [x] `vite.config.ts` / `tsconfig.json` / `index.html`
+  - [ ] ESLint + Prettier + 提交钩子（ESLint flat config + Prettier + .editorconfig 已落；**husky / lint-staged 提交钩子留待 G12**）
 - [ ] **G2 CloudBase 接入**
   - [x] 申请 / 选定 CloudBase 环境 ID（`zy-memoir-d5gaxbvyxe80564f4`，已写入 `cloudbaserc.json`；G1 起 vite 工程后再落 `.env.production` 的 `VITE_TCB_ENV_ID`）
   - [x] CloudBase MCP 配置（`config/mcporter.json`，agent 通过 `npx mcporter call cloudbase.*` 调用）
-  - [ ] CloudBase 设备码登录：`npx mcporter call cloudbase.auth action=start_auth authMode=device --output json` → `auth action=set_env envId=zy-memoir-d5gaxbvyxe80564f4`
-  - [ ] `src/api/cloudbase.ts` SDK 单例
-  - [ ] 云函数模板：`studentLogin / teacherLogin / adminCheck / seedStudents`
-  - [ ] **⚠️** 把 `kindergarten_students_en_keys.json` 移入 `src/assets/data/` 并写 `seedStudents` 上传逻辑
-  - [ ] **⚠️** 管理员 token 方案选定（Q-PLAN-14 / spec Q-ADMIN-AUTH）
-- [ ] **G3 路由 + 鉴权**
-  - [ ] `src/router/index.ts` 三路由
-  - [ ] 登录守卫：未登录 → 默认弹 `/login` 浮层；admin route → 校验 token；**`/admin` 拒绝 `role==='guest'`**
-  - [ ] `src/stores/auth.ts` + LocalStorage 持久化（**Q-LOGIN-TTL**）；新增 `Role='guest'` + `skipToGuest()` / `openLoginPanel()` action
-- [ ] **G4a 学生登录浮层 `StudentLogin.vue`（路由 `/`）**
-  - [ ] 学号 + 姓名双输入框 + 校验（本地名单 + 云函数 `studentLogin`）
-  - [ ] 失败 Toast / 成功 `router.replace('/')` 落主页
-  - [ ] 嵌入 `<LoginSkipFooter />`（**仅跳过登录入口**，不含角色互通）
-  - [ ] **断言**：浮层内不存在任何指向 `/teacher` 的可点击元素（与 AC-18 对齐）
-- [ ] **G4b 老师登录浮层 `TeacherLogin.vue`（路由 `/teacher`）**
-  - [ ] 单选老师姓名 + 云函数 `teacherLogin`
-  - [ ] 失败 Toast / 成功 `router.replace('/')` 落主页
-  - [ ] 嵌入 `<LoginSkipFooter />`（**仅跳过登录入口**，不含角色互通）
-  - [ ] **断言**：浮层内不存在任何指向 `/` 的可点击元素（与 AC-18 对齐）
-- [ ] **G4c 共用 `LoginSkipFooter.vue`**
-  - [ ] 「↪ 跳过登录，仅浏览」入口 → 调 `auth.skipToGuest()`，关闭浮层落到 `/`（**Q-PLAN-15**）
-  - [ ] 视觉规范：弱化样式（文本按钮 + 左侧返回箭头 icon），与「进入」主按钮拉开层级
-  - [ ] **不**包含「我是老师 / 我是学生」反向跳转链接（**v0.3 Q-PLAN-17 决议**）
+  - [x] CloudBase 设备码登录 + `auth.set_env`（`auth action=status` 验证：`env_status=READY` / `current_env_id=zy-memoir-d5gaxbvyxe80564f4`）
+  - [x] `src/api/cloudbase.ts` SDK 单例
+  - [x] 云函数代码：`studentLogin` / `teacherLogin` / `adminCheck` / `seedStudents` / `seedTeachers` / `listTeachers`（落 `cloudfunctions/`，含 `_shared/{hmac.js,response.js}` 同步副本说明）
+  - [x] `seedStudents` / `seedTeachers` 用 `cloudbase.downloadFile({fileID})` 从 COS 拉 `data/2024_02_*.json`（COS 真源）→ `db.collection().add()` 写库（**Q-PLAN-20 ✅**；前端**不**导入本地 JSON）
+  - [x] 管理员 token 方案选定：**HMAC(env-key, ts) 防伪 token**（**Q-PLAN-18 ✅**；具体实现挂在 G2 云函数 `adminCheck` + G12 `scripts/sign-admin-token.mjs`）
+- [x] **G3 路由 + 鉴权**
+  - [x] `src/router/index.ts` 三路由
+  - [x] 登录守卫：未登录 → 默认弹 `/login` 浮层；admin route → 校验 token；**`/admin` 拒绝 `role==='guest'`**
+  - [x] `src/stores/auth.ts` + LocalStorage 持久化（**Q-LOGIN-TTL**）；新增 `Role='guest'` + `skipToGuest()` / `openLoginPanel()` action
+- [x] **G4a 学生登录浮层 `StudentLogin.vue`（路由 `/`）**
+  - [x] 学号 + 姓名双输入框 + 校验（云函数 `studentLogin` 主校验，Q-PLAN-19）
+  - [x] 失败行内错误提示 / 成功 `setStudent` 关闭浮层（Toast 体系挂 G10 / G11）
+  - [x] 嵌入 `<LoginSkipFooter />`（**仅跳过登录入口**，不含角色互通）
+  - [x] **断言**：浮层内不存在任何指向 `/teacher` 的可点击元素（与 AC-18 对齐）
+- [x] **G4b 老师登录浮层 `TeacherLogin.vue`（路由 `/teacher`）**
+  - [x] 单选老师姓名（数据来自 `listTeachers` 云函数）+ 云函数 `teacherLogin`
+  - [x] 失败行内错误提示 / 成功 `setTeacher` 关闭浮层（Toast 挂 G10 / G11）
+  - [x] 嵌入 `<LoginSkipFooter />`（**仅跳过登录入口**，不含角色互通）
+  - [x] **断言**：浮层内不存在任何指向 `/` 的可点击元素（与 AC-18 对齐）
+- [x] **G4c 共用 `LoginSkipFooter.vue`**
+  - [x] 「↪ 跳过登录，仅浏览」入口 → 调 `auth.skipToGuest()`，关闭浮层落到 `/`（**Q-PLAN-15**）
+  - [x] 视觉规范：弱化样式（文本按钮 + 左侧返回箭头 icon），与「进入」主按钮拉开层级
+  - [x] **不**包含「我是老师 / 我是学生」反向跳转链接（**v0.3 Q-PLAN-17 决议**）
 - [ ] **G5 主页 `Home.vue` & 子组件**
   - [ ] `HomeTopbar.vue`（含 ⚙ 入口可见性、退出登录）
   - [ ] `BannerCarousel.vue`（自动 + 手动切换、空态、点击放大开关）
@@ -1002,20 +1027,20 @@ interface UploadTask {
 
 ### 组 1：工程脚手架与基础设施（依赖：无）
 
-- [ ] G1 工程脚手架
+- [x] G1 工程脚手架
 - [x] G2 CloudBase 环境申请（`zy-memoir-d5gaxbvyxe80564f4`）+ `cloudbaserc.json` + `config/mcporter.json`
-- [ ] G2 CloudBase 设备码登录 + `auth.set_env`（任意时刻先于 G2 云函数部署）
-- [ ] G2 SDK 单例（`src/api/cloudbase.ts`，依赖 G1 工程脚手架）
-- [ ] G3 路由 + Pinia + 登录守卫骨架（先以 mock authStore 跑通三页跳转）
+- [x] G2 CloudBase 设备码登录 + `auth.set_env`（任意时刻先于 G2 云函数部署）
+- [x] G2 SDK 单例（`src/api/cloudbase.ts`，依赖 G1 工程脚手架）
+- [x] G3 路由 + Pinia + 登录守卫骨架（先以 mock authStore 跑通三页跳转）
 
 ### 组 2：登录与鉴权（依赖：组 1）
 
-- [ ] G2 云函数：`studentLogin` / `teacherLogin` / `adminCheck` / `seedStudents`
-- [ ] G2 名单文件迁入 `src/assets/data/` + `seedStudents` 跑通
-- [ ] G4a `StudentLogin.vue`（路由 `/`）+ 真接口联调
-- [ ] G4b `TeacherLogin.vue`（路由 `/teacher`）+ 真接口联调
-- [ ] G4c `LoginSkipFooter.vue`：「↪ 跳过登录，仅浏览」+ `auth.skipToGuest()`（**仅跳过逻辑**，不含角色互通）
-- [ ] G3 admin route token 校验（拒绝 `role==='guest'`）
+- [x] G2 云函数代码：`studentLogin` / `teacherLogin` / `adminCheck` / `seedStudents` / `seedTeachers` / `listTeachers`（落 `cloudfunctions/`，HMAC 走 `_shared/hmac.js` 同步副本；与 Q-PLAN-18 / 19 / 20 对齐）
+- [x] G2 名单 seed 跑通：6 个云函数已部署 + `AUTH_HMAC_KEY` / `ADMIN_HMAC_KEY` 注入完成；`seedStudents` 写入 36 条、`seedTeachers` 写入 3 条；端到端正负例（学生：金智雅 LOGIN_OK / 错名 NAME_MISMATCH / id=99 STUDENT_NOT_FOUND；老师：刘希荷 LOGIN_OK / id=99 TEACHER_NOT_FOUND；admin：7 天 token ADMIN_OK / 错签 INVALID_TOKEN / 过期 EXPIRED_TOKEN）全过
+- [x] G4a `StudentLogin.vue`（路由 `/`）：表单 + `studentLogin` 联调 + Toast
+- [x] G4b `TeacherLogin.vue`（路由 `/teacher`）：`listTeachers` 单选下拉 + `teacherLogin` 联调 + Toast
+- [x] G4c `LoginSkipFooter.vue`：「↪ 跳过登录，仅浏览」+ `auth.skipToGuest()`（**仅跳过逻辑**，不含角色互通）
+- [x] G3 admin route token 校验（拒绝 `role==='guest'`；进入 `/admin` 调 `adminCheck` 云函数验 HMAC token）
 
 ### 组 3：主页骨架与数据层（依赖：组 1 / 2）
 

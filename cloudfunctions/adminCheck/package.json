@@ -1,0 +1,6 @@
+{
+  "name": "adminCheck",
+  "version": "1.0.0",
+  "description": "钟园 2024 大二班 · 管理员 HMAC token 校验（无后端会话）",
+  "main": "index.js"
+}

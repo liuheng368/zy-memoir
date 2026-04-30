@@ -1,0 +1,70 @@
+/* =====================================================================
+ * zy-memoir · 全局基础样式
+ * 仅承载 reset、字体与 CSS 变量；组件级样式各自封装
+ * ===================================================================== */
+
+:root {
+  --color-primary: #ff7e8b;
+  --color-primary-soft: #ffe3e6;
+  --color-text: #1f1f23;
+  --color-text-soft: #6b6b73;
+  --color-bg: #fff8f5;
+  --color-card: #ffffff;
+  --color-border: #f0e0dc;
+  --color-success: #52c41a;
+  --color-error: #f5222d;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  --font-base:
+    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    'Helvetica Neue', Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-base);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}

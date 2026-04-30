@@ -44,6 +44,7 @@
 
 ## figma设计图
 https://www.figma.com/design/SRhw2CukEu6wqb2HsOfFHT/%E9%92%9F%E5%9B%AD%E5%B9%BC%E5%84%BF%E5%9B%AD-2024-%E5%B1%8A%E5%A4%A7%E4%BA%8C%E7%8F%AD-%E5%9B%9E%E5%BF%86%E5%BD%95-PRD-%E8%A7%86%E5%9B%BE?node-id=4-374&t=kTS9rpn7wSp4hAhb-0
+### 参考效果图： figma/xiaoguotu.png
 
 ## 页面交互描述
 

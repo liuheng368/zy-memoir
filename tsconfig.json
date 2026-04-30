@@ -1,0 +1,8 @@
+{
+  "$comment": "Project references — 让 IDE 与 vue-tsc 同时识别 app（DOM）与 node（vite.config.ts）两套环境",
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.app.json" }
+  ]
+}

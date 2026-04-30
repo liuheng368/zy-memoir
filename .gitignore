@@ -48,3 +48,4 @@ cloudfunctions/**/node_modules/
 *.log
 *.tmp
 .cache/
+.secrets/

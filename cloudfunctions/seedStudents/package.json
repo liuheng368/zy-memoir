@@ -1,0 +1,9 @@
+{
+  "name": "seedStudents",
+  "version": "1.0.0",
+  "description": "钟园 2024 大二班 · 从 COS 真源拉学生名单种入 students 集合",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.0.0"
+  }
+}

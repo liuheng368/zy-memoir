@@ -22,19 +22,54 @@
           "functions": [
             {
               "name": "studentLogin",
-              "$comment": "G2: 学号 + 姓名校验 → 发短期 token；G14 写入口校验 role"
+              "$comment": "G2: 学号 + 姓名校验 → HMAC 签 token；G14 写入口校验 role",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "请在 CloudBase 控制台 / mcp set_env 单独设置（不入仓库）"
+              }
             },
             {
               "name": "teacherLogin",
-              "$comment": "G2: 老师姓名校验 → 发短期 token"
+              "$comment": "G2: 老师 id 校验 → HMAC 签 token",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 studentLogin 共用同一密钥"
+              }
             },
             {
               "name": "adminCheck",
-              "$comment": "G2 / Q-PLAN-14: 校验 ADMIN_TOKEN（环境变量，不入仓库）"
+              "$comment": "G2 / Q-PLAN-18: 验 HMAC(ADMIN_HMAC_KEY, ts) 防伪 token，30 天滚动过期",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "ADMIN_HMAC_KEY": "请在 CloudBase 控制台 / mcp set_env 单独设置（与 AUTH_HMAC_KEY 解耦，便于独立轮换）"
+              }
             },
             {
               "name": "seedStudents",
-              "$comment": "G2: 把 src/assets/data/kindergarten_students_en_keys.json 写入云数据库 students 集合（一次性）"
+              "$comment": "G2 / Q-PLAN-20: 用 cloudbase.downloadFile 从 COS 拉 2024_02_student_list.json → db students 集合 upsert",
+              "runtime": "Nodejs18.15",
+              "memorySize": 256,
+              "timeout": 30
+            },
+            {
+              "name": "seedTeachers",
+              "$comment": "G2 / Q-PLAN-20: 同 seedStudents，对 teachers 集合",
+              "runtime": "Nodejs18.15",
+              "memorySize": 256,
+              "timeout": 30
+            },
+            {
+              "name": "listTeachers",
+              "$comment": "G2 / Q-PLAN-20: 进入 /teacher 时供老师下拉名单使用，只查 teachers 集合 id/name/role 字段",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5
             }
           ]
         }

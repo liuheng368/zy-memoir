@@ -1,0 +1,19 @@
+{
+  "$comment": "node 侧仅用于 vite.config.ts / eslint.config.js 的类型检查；最小自写以避免 @tsconfig/node22 携带 TS 5.7+ 才识别的 lib",
+  "include": ["vite.config.*", "eslint.config.*"],
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "skipLibCheck": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "types": ["node"]
+  }
+}

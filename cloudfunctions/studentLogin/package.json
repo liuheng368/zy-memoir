@@ -1,0 +1,9 @@
+{
+  "name": "studentLogin",
+  "version": "1.0.0",
+  "description": "钟园 2024 大二班 · 学生登录（学号 + 姓名 → HMAC token）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.0.0"
+  }
+}

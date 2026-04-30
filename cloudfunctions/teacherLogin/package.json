@@ -1,0 +1,9 @@
+{
+  "name": "teacherLogin",
+  "version": "1.0.0",
+  "description": "钟园 2024 大二班 · 老师登录（teacherId → HMAC token）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.0.0"
+  }
+}
