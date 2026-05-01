@@ -48,3 +48,9 @@ export const ROUTES = {
   TEACHER: '/teacher',
   ADMIN: '/admin',
 } as const
+
+/** Banner 自动轮播间隔（ms，PRD v0.4 二期：5 秒） */
+export const BANNER_AUTOPLAY_MS = 5000
+
+/** 头像裁剪输出像素（正方形，PRD v0.4 二期 / spec Q-PLAN-2-1） */
+export const AVATAR_CROP_OUTPUT_PX = 1024
