@@ -1082,6 +1082,89 @@ interface UploadTask {
 
 ---
 
+## 二期实现计划（v0.5 · PRD v0.4 新增）
+
+> **来源**：[`prd/prd.md`](./prd/prd.md) `## 二期功能` 4 条；交互细节见 [`spec.md`](./spec.md) `## 6. 二期功能交互细节`；本节落实**架构 / 模块划分 / 实现勾选 / AC**。
+> **不引第三方依赖**（裁剪 / lightbox 均自实现，spec Q18 决议）；现有依赖只多用一次 [`useImageCompress`](src/composables/useImageCompress.ts)。
+> **不动云函数**：4 条二期需求纯前端，写入路径不变（`updateStudentAvatar` / `updateTeacherAvatar` / `removeStudentRecording` / `removeTeacherRecording` / `listBanners` 均无 schema 改动）。
+
+### 架构与模块划分
+
+| 模块 | 职责 | 复用 | 关联 PRD |
+| --- | --- | --- | --- |
+| `src/components/common/AvatarCropper.vue` | 通用方形头像裁剪弹层；输入 `File`，emit `confirm(Blob)` | 学生 / 老师头像编辑共用 | PRD-2-① |
+| `src/components/common/Lightbox.vue` | 通用全屏图片放大遮罩；props `{ open, src, alt }` + `update:open` | 学生 / 老师头像点击放大 | PRD-2-② |
+| `src/components/overlays/StudentOverlay.vue` | 接入裁剪 + 头像 lightbox + 录音项 🗑 按钮 | 一期既有 | PRD-2-①②③ |
+| `src/components/overlays/TeacherOverlay.vue` | 同上（无照片墙） | 一期既有 | PRD-2-①②③ |
+| `src/components/home/BannerCarousel.vue` | `AUTO_PLAY_MS` 4000 → 5000 | 一期既有 | PRD-2-④ |
+
+### 二期 API & 状态字段
+
+- **接口契约**：**零变更**（spec Q18~Q21 决议均已说明）
+  - 头像裁剪后仍走 `useImageCompress.compress()` → `useUpload.upload()` → `updateStudentAvatar / updateTeacherAvatar`
+  - 录音删除按钮内部仍走 `removeStudentRecording / removeTeacherRecording`
+- **新增前端常量**：[`src/utils/constants.ts`](src/utils/constants.ts)
+  - `BANNER_AUTOPLAY_MS = 5000`（替换 BannerCarousel 内联常量，便于一处可调）
+  - `AVATAR_CROP_OUTPUT_PX = 1024`（裁剪输出尺寸；选 1024 留富余给压缩链）
+
+### 二期实现 checkbox
+
+#### 组 II-1：通用组件
+
+- [ ] `src/components/common/AvatarCropper.vue`
+  - props `{ open: boolean, file: File | null }`，emits `update:open`、`confirm(Blob)`、`cancel`
+  - canvas 渲染：`<img>` 解码 → `Image.decode()` 拿原始尺寸 → 在 `<canvas>` 上绘制（offscreen 不必，性能足够）
+  - 手势：`pointerdown/move/up` 拖动 + `wheel` 缩放（PC）+ `touchstart/touchmove` 双指 pinch（移动）
+  - 「确认」时按当前缩放/平移参数 `drawImage` 到目标 `AVATAR_CROP_OUTPUT_PX × AVATAR_CROP_OUTPUT_PX` 的 canvas → `toBlob('image/jpeg', 0.92)` → emit
+  - 视觉：方形裁剪框 + 蒙层四角描边；底部三按钮「取消 / 重选 / 确认」，重选触发 `<input type="file">` 重弹
+- [ ] `src/components/common/Lightbox.vue`
+  - props `{ open: boolean, src: string, alt?: string }`，emit `update:open`
+  - Teleport 到 body，z-index 9000（高于 overlay-mask 8000）
+  - 关闭：点击图片外区域 / 按 ESC / 点 ✕；按下 ESC 走 `keydown` window listener（mount 时绑、unmount 时解）
+
+#### 组 II-2：现有组件接入
+
+- [ ] [`StudentOverlay.vue`](src/components/overlays/StudentOverlay.vue)
+  - `onAvatarPicked` → 不再直接 `doUploadAvatar(file)`；改为 `pendingCropFile.value = file; cropperOpen.value = true`
+  - 新增 `onCropConfirmed(blob: Blob)` → `doUploadAvatar(new File([blob], 'avatar.jpg', { type: blob.type }))`
+  - 头像 `<img>` 加 `@click="lightboxOpen = true"`，新增 `lightboxOpen` ref + `<Lightbox v-model:open=…>`
+  - 录音项追加 `<button v-if="effectiveMode==='owner'" class="rec-delete" @click.stop="onRecordingDeleteClick(r)">🗑</button>`
+  - `onRecordingDeleteClick(r)` → 直接 `pendingDelete.value = { kind:'recording', id:r.id, label:'这段录音' }; confirmOpen.value = true`（复用既有删除流）
+- [ ] [`TeacherOverlay.vue`](src/components/overlays/TeacherOverlay.vue)：同上，注意无照片墙
+- [ ] [`BannerCarousel.vue`](src/components/home/BannerCarousel.vue)：`AUTO_PLAY_MS = 5000`
+
+#### 组 II-3：测试与部署
+
+- [ ] `pnpm typecheck && pnpm lint` 全绿
+- [ ] `pnpm build` 出 dist
+- [ ] 通过 mcporter `cloudbase.uploadFiles` 旁路推 dist 到 COS（避免 `tcb app deploy` 走 git HEAD）
+- [ ] 真机验证 4 条体验
+
+### 二期验收 AC（同步写入 [`AC-CHECKLIST.md`](./AC-CHECKLIST.md)）
+
+| AC | 描述 | 验证 |
+| --- | --- | --- |
+| AC-19 | 学生 / 老师主态点「换头像」→ 弹出裁剪框；可拖动缩放；确认后头像更新 | 真机 |
+| AC-20 | 学生 / 老师浮层（任何模式）头像点击 → 全屏放大 → 点击外侧关闭 | 真机 |
+| AC-21 | 学生 / 老师主态录音条右侧出现 🗑；点击弹确认；客态/游客态不渲染按钮 | 真机 |
+| AC-22 | 主页轮播切换间隔为 5 秒（实测两次切换 ≈ 5s ± 0.3s） | 真机 / 计时 |
+
+### 二期方案澄清事项
+
+#### Q-PLAN-2-1：裁剪输出尺寸（**Q-AVATAR-CROP-OUT**）
+
+- [x] **决议（v0.5）**：1024×1024，JPEG，质量 0.92。理由：①一期 `useImageCompress` 默认 maxWidthOrHeight=2048 + 3MB 上限，裁剪输出 1024 后再 compress 几乎不压缩，省时；②头像浮层显示尺寸 96px，1024 已超 10 倍 retina 余量 ✅
+
+#### Q-PLAN-2-2：裁剪手势冲突（**Q-AVATAR-CROP-GESTURE**）
+
+- [x] **决议（v0.5）**：裁剪弹层 z-index = 8500（介于 overlay 8000 与 lightbox 9000 之间），裁剪期间 body 锁滚（添加 `overflow:hidden`），unmount 解锁。原因：避免与浮层背后的页面滚动冲突 ✅
+
+#### Q-PLAN-2-3：Lightbox 与浮层关闭冲突（**Q-LIGHTBOX-ESC**）
+
+- [x] **决议（v0.5）**：ESC 优先关 lightbox（不冒泡到浮层）；mount 时挂 keydown 监听 + `e.stopPropagation()`，关闭时解监听 ✅
+
+---
+
 ## 代码审查
 
 <!-- 阶段 4 填写：实现计划全部 [x] 后 -->
