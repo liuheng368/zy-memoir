@@ -15,6 +15,37 @@
   </head>
   <body>
     <div id="app"></div>
+    <!--
+      首屏错误兜底：在 Vue 还未挂载之前 hook window.onerror / unhandledrejection。
+      若 SPA 因任何同步/异步异常导致空白，把错误信息直接渲染到 #app，
+      避免「页面纯白 + 必须开 DevTools 才能定位」的盲区（GH Pages / CDN
+      场景下家长机器尤其难排查）。Vue 成功 mount 后会覆盖此 fallback DOM。
+    -->
+    <script>
+      (function () {
+        function showFatal(msg, src) {
+          var app = document.getElementById('app')
+          if (!app) return
+          // 只在 Vue 还未渲染（#app 为空）时兜底
+          if (app.children.length > 0) return
+          app.innerHTML =
+            '<div style="padding:24px;font:14px/1.6 -apple-system,system-ui,sans-serif;color:#222">' +
+            '<h2 style="color:#d4380d;margin:0 0 12px">⚠️ 页面加载失败</h2>' +
+            '<p style="margin:0 0 8px;color:#666">请截图给管理员；或下拉刷新一下试试。</p>' +
+            '<pre style="white-space:pre-wrap;word-break:break-word;background:#f5f5f5;padding:12px;border-radius:6px;font-size:12px;color:#a8071a">' +
+            String(msg).replace(/[<>&]/g, function (c) { return { '<':'&lt;','>':'&gt;','&':'&amp;' }[c] }) +
+            (src ? '\n\nat ' + src : '') +
+            '</pre></div>'
+        }
+        window.addEventListener('error', function (e) {
+          showFatal(e.message || (e.error && e.error.message) || 'Unknown error', e.filename + ':' + e.lineno)
+        })
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e.reason
+          showFatal((r && (r.stack || r.message)) || String(r), 'Promise rejection')
+        })
+      })()
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
