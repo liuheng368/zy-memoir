@@ -20,6 +20,7 @@ type Storage = App['storage']
 
 let _app: App | null = null
 let _auth: Auth | null = null
+let _anonAuthPromise: Promise<void> | null = null
 
 /** 读取环境 ID；未配置时抛出可定位的错误，避免静默 401 */
 function readEnvId(): string {
@@ -52,6 +53,32 @@ export function getDB(): Database {
 }
 
 /**
+ * 确保已发起 CloudBase 匿名登录（plan.md Q-PLAN-8 方案 A）
+ *
+ * - 幂等：同一进程内只发起一次（即使并发调用也共享同一个 Promise）；
+ * - 已有任意登录态（匿名 / 学生 token / 老师 token / admin）则直接 resolve；
+ * - 失败时清空缓存以便上层重试（避免一次失败永久卡死）；
+ * - **不**阻塞 SPA 渲染，而是在第一次 `callFunction` / `getStorage` 等真实调用前 await。
+ *
+ * CloudBase Web SDK v2.x 调云函数 / 写存储前必须有用户态，
+ * 否则会被 CloudBase 网关返回 INVALID_USER / 调用拒绝。
+ */
+export async function ensureAnonAuth(): Promise<void> {
+  if (_anonAuthPromise) return _anonAuthPromise
+  _anonAuthPromise = (async () => {
+    const auth = getAuth()
+    const loginState = await auth.getLoginState()
+    if (loginState) return // 已经有任意登录态（含 LocalStorage 持久化的匿名态）
+    const provider = auth.anonymousAuthProvider()
+    await provider.signIn()
+  })().catch((err) => {
+    _anonAuthPromise = null
+    throw err
+  })
+  return _anonAuthPromise
+}
+
+/**
  * 获取存储（COS）实例（v2.28+ Supabase 风格 `from('bucket').uploadFile(...)`）。
  * 旧接口 `app.uploadFile / downloadFile / deleteFile` 也仍可在 `getApp()` 上直接使用。
  */
@@ -69,6 +96,7 @@ export async function callFunction<TResult = unknown>(
   name: string,
   data?: object,
 ): Promise<TResult> {
+  await ensureAnonAuth()
   const res = await getApp().callFunction({
     name,
     data: data as Record<string, unknown> | undefined,
@@ -88,6 +116,7 @@ export function getCollection(name: string) {
 export function _resetForTest(): void {
   _app = null
   _auth = null
+  _anonAuthPromise = null
 }
 
 export type { App as CloudBaseApp, Auth as CloudBaseAuth, Database as CloudBaseDatabase, Storage as CloudBaseStorage }

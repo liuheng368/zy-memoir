@@ -11,7 +11,7 @@
  * Plan: G8 useUpload；AC: AC-14 错误回退 + 乐观 UI。
  */
 import { ref } from 'vue'
-import { getApp } from '@/api/cloudbase'
+import { ensureAnonAuth, getApp } from '@/api/cloudbase'
 
 export type UploadKind = 'avatar' | 'photo' | 'recording' | 'banner'
 export type UploadStatus = 'idle' | 'uploading' | 'success' | 'failed'
@@ -88,6 +88,8 @@ export function useUpload() {
   }
 
   async function uploadOnce(params: UploadParams): Promise<UploadResult> {
+    // CloudBase v2 SDK 直传 COS 也需要用户态（plan.md Q-PLAN-8 方案 A 匿名鉴权）
+    await ensureAnonAuth()
     const app = getApp()
     progress.value = 0
     const resp = (await app.uploadFile({

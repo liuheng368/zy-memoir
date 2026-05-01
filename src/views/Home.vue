@@ -12,9 +12,9 @@
  *   - onMounted 调 useClassDataStore().fetchAll() —— Promise.allSettled 并发拉
  *     三段，互不阻塞
  *   - 点学生头像 → 打开 <StudentOverlay>；登录学生点自己 → owner 模式，否则 visitor
- *   - 点老师头像 → 仅"登录老师点自己"才打开 <TeacherOverlay>（owner 模式）；
- *     其它角色（学生 / 游客 / admin）按 spec Q-TEACHER-OTHER 默认决议**不**打开
- *     教师浮层（仍可通过老师卡片上的录音条直接听）
+ *   - 点老师头像 → 打开 <TeacherOverlay>；登录老师点自己 → owner 模式（可换头像/增删录音），
+ *     其它角色（学生 / 游客 / admin / 其他老师） → visitor 模式（仅头像 + 录音播放，
+ *     所有编辑入口隐藏）。spec Q-TEACHER-OTHER 已决议为方案 B（与学生体验一致）。
  *
  * 与登录浮层的关系：
  *   - 路由 `/`  → views/StudentLogin.vue 内部 `<Home />` + 学生登录浮层
@@ -81,14 +81,11 @@ const teacherOverlayMode = computed<'owner' | 'visitor'>(() => {
 })
 
 function handleTeacherClick(t: TeacherFull): void {
-  // spec Q-TEACHER-OTHER 决议：默认仅老师本人可打开浮层；其他角色不开浮层
-  if (
-    role.value === 'teacher' &&
-    teacherProfile.value?.teacherId === t.id
-  ) {
-    currentTeacherId.value = t.id
-    teacherOverlayOpen.value = true
-  }
+  // spec Q-TEACHER-OTHER 方案 B：所有人可点开老师浮层；
+  // owner / visitor 模式由 teacherOverlayMode computed + TeacherOverlay 内部
+  // effectiveMode 双重保险判定，编辑按钮在 visitor 模式下统一隐藏。
+  currentTeacherId.value = t.id
+  teacherOverlayOpen.value = true
 }
 
 function onTeacherOverlayUpdated(): void {
