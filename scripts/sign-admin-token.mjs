@@ -1,12 +1,18 @@
 #!/usr/bin/env node
 /**
- * scripts/sign-admin-token.mjs
+ * scripts/sign-admin-token.mjs — 底层签发器（CI / 离线场景使用）
  *
- * 离线签发管理员 token（与 cloudfunctions/adminCheck 共用 HMAC 协议）。
+ * 与 cloudfunctions/adminCheck 共用 HMAC 协议：HMAC(SHA-256, ADMIN_HMAC_KEY)，
+ * payload = base64url(JSON({role:'admin', issuedAt})), 30 天滚动过期可调。
  *
- * 用法：
+ * 用法（必须显式传 ADMIN_HMAC_KEY 环境变量）：
  *   ADMIN_HMAC_KEY="xxxxx" node scripts/sign-admin-token.mjs            # 默认 30 天
  *   ADMIN_HMAC_KEY="xxxxx" node scripts/sign-admin-token.mjs --days 7   # 自定义天数
+ *   或： ADMIN_HMAC_KEY="xxxxx" pnpm sign:admin:env --days 7
+ *
+ * 本地推荐改用 wrapper 让脚本自动从 CloudBase 拉 key：
+ *   pnpm sign:admin --days 30
+ *   见 scripts/sign-admin.mjs（背后仍调本脚本）。
  *
  * 输出：
  *   已签发 admin token：
