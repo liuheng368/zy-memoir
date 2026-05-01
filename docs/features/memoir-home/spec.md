@@ -400,7 +400,7 @@ flowchart LR
 #### Q4：老师身份与管理边界（**Q-TEACHER-EDIT-OTHER** / **Q-TEACHER-OTHER** / **Q-TEACHER-MAX**）
 
 - [ ] 老师能否点开**学生浮层**进入主态、代为编辑学生资料：默认 **否**（仅客态查看）⚠️
-- [ ] 老师能否点开**其他老师**的教师浮层：默认 **否，仅自己头像可点** ⚠️
+- [x] **Q-TEACHER-OTHER 决议（2026-05-01 v0.4）**：所有人（含游客 / 学生 / 其他老师 / admin）均可点开**老师客态浮层**（仅头像 + 录音播放，编辑入口统一隐藏），与学生浮层游客可点开体验一致；只有「登录老师本人点自己头像」才进入 owner 模式。实现：[`Home.vue handleTeacherClick`](src/views/Home.vue:83-89) 直接 push open，模式由 `teacherOverlayMode` computed + [`TeacherOverlay.effectiveMode`](src/components/overlays/TeacherOverlay.vue:52-57) 双重保险判定 ✅
 - [ ] 教师录音上限：PRD 写「多段」未给数字；建议 **≤10 段**（与学生 5 段拉开差异） ⚠️
 
 #### Q5：合影轮播细节（**Q-BANNER** / **Q-BANNER-INTERVAL** / **Q-BANNER-ZOOM** / **Q-BANNER-ORDER**）
@@ -487,9 +487,7 @@ flowchart LR
 
 #### Q16：教师头像 / 老师录音的客态可见性（**Q-TEACHER-AVATAR**）
 
-- [ ] 主页③老师区头像点击**仅**对老师本人可点开教师浮层（主态）；学生 / 管理员**不可点开**老师头像 ⚠️
-- [ ] 或：所有人均可点击**查看老师客态**（看头像 + 听录音）⚠️
-- [ ] 或：主页录音条已经提供老师录音播放，故老师头像**不必可点**（学生客态需求很弱）⚠️
+- [x] **决议（2026-05-01 v0.4）**：所有人均可点击**查看老师客态**（看头像 + 听录音），与学生头像点击体验一致；只有「登录老师本人点自己头像」才进入主态。理由：①线上 v0.3 实测「点了没反应」体验差；②TeacherOverlay 已实现 `effectiveMode` 双重保险，visitor 模式下编辑入口 100% 隐藏，无安全风险；③和学生头像统一交互降低用户认知负担 ✅
 
 #### Q17：游客模式（**Q-GUEST-MODE** / **Q-GUEST-LOGIN-ENTRY** / **Q-GUEST-PERSIST** / **Q-GUEST-DEEPLINK**）
 

@@ -81,7 +81,7 @@
 #### M-③ 老师风采 `TeacherSection.vue`
 
 - **复用**：`<TeacherCard />`（头像 + 姓名 + `<RecordingList />`）。
-- **行为**：仅**当前登录老师**自己的卡片**可点开** `TeacherOverlay` 主态（spec Q-TEACHER-OTHER 默认 ⓛ）；其余角色（学生 / 管理员 / **游客**）按 spec 默认**不可点开**老师浮层，**录音条仍可直接播放**（无编辑能力，对游客天然友好）。
+- **行为**（v0.4 修订，spec Q-TEACHER-OTHER 决议方案 B）：**所有人均可点开** `TeacherOverlay`；**登录老师本人**点自己头像 → owner 模式（可换头像 / 增删录音），其它角色（学生 / 管理员 / 其他老师 / **游客**） → visitor 模式（仅头像 + 录音播放，编辑入口统一隐藏）；与学生头像点击体验一致。卡片上的录音条同样直接可播放（不需要点头像进浮层）。
 - **触发接口**：`teachersService.list()`（**API-6** `home.fetchTeachers`）。
 - **AC 映射**：AC-5 / AC-8 / AC-12 / **AC-17**。
 
@@ -985,7 +985,7 @@ interface UploadTask {
   - [x] 头像换图（API-10 `updateStudentAvatar`；plan 阶段补建云函数）
 - [x] **G7 教师浮层 `TeacherOverlay.vue`**
   - [x] 仅主态：换头像 + 增删录音（无自我介绍 / 无照片墙；段数不设上限，对齐 Q-PLAN-12）
-  - [x] 对其他老师 / 学生 / **游客**：按 Q-TEACHER-OTHER 默认决议**不开放**点开（Home.vue 的 `handleTeacherClick` 仅当老师本人匹配时才 push open；浮层自身也兼容 visitor 模式）
+  - [x] 对其他老师 / 学生 / **游客**：v0.4 修订（Q-TEACHER-OTHER 方案 B）→ **可点开 visitor 模式**（仅头像 + 录音播放，编辑入口隐藏）；Home.vue 的 `handleTeacherClick` 直接 push open，模式由 `teacherOverlayMode` computed + TeacherOverlay 内部 `effectiveMode` 双重保险判定
 - [x] **G8 上传 / 录音 composables**
   - [x] `useUpload`（progress / retry / 乐观 UI）
   - [x] `useRecorder`（MediaRecorder + 60s 倒计时 + 停止）

@@ -25,7 +25,7 @@
 | 0.2 | 云函数全量部署 | `pnpm deploy:fn`（21 个云函数；学生 / 老师 HMAC + admin HMAC 两套独立） | [ ] |
 | 0.3 | 静态站部署 | `pnpm deploy:static` 后获得托管域名（`https://<envId>.tcloudbaseapp.com/`） | [ ] |
 | 0.4 | seed 名单写入 | 控制台 / mcp 触发 `seedStudents` + `seedTeachers`（一次性） | [x] |
-| 0.5 | 管理员 token 签发 | `ADMIN_HMAC_KEY=xxx pnpm sign:admin --days 7` 拿到 token | [ ] |
+| 0.5 | 管理员 token 签发 | `pnpm sign:admin --days 30`（自动从 CloudBase 拉 ADMIN_HMAC_KEY 后签发；CI 离线场景用 `ADMIN_HMAC_KEY=xxx pnpm sign:admin:env --days 7`） | [x] |
 
 ---
 
@@ -89,7 +89,7 @@
 | 子 | 操作 | 预期 | 结果 |
 | --- | --- | --- | --- |
 | 8.1 | 老师 A 登录后点自己头像 | 浮层主态；可换头像、增删录音 | [ ] |
-| 8.2 | 老师 A 登录后点老师 B 头像 | 按 spec **Q-TEACHER-OTHER** 默认 → 不打开主态浮层 | [ ] |
+| 8.2 | 老师 A 登录后点老师 B 头像 | 按 spec **Q-TEACHER-OTHER** v0.4 方案 B → 打开 **visitor 模式**浮层（仅头像 + 录音，无编辑入口） | [ ] |
 
 ### AC-9 管理员可增删合影
 
