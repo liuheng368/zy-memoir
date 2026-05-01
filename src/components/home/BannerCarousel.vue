@@ -3,7 +3,7 @@
  * 合影轮播（plan M-② · spec §1.1 ② / §2 ② / Q5）
  *
  * 行为：
- *   - 自动轮播：4 s 间隔（spec Q5 区间 3~5 s 内取中位）
+ *   - 自动轮播：5 s 间隔（PRD v0.4 二期 / spec Q-CAROUSEL-AUTOPLAY-5S；常量见 utils/constants.ts）
  *   - 手动：左右切换 + 圆点指示器
  *   - hover / focus 暂停自动播放
  *   - 空态：占位文案「敬请期待班级合影」
@@ -15,13 +15,14 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { Banner } from '@/api/banners'
 import type { SectionStatus } from '@/stores/classData'
+import { BANNER_AUTOPLAY_MS } from '@/utils/constants'
 
 const props = defineProps<{
   banners: Banner[]
   status: SectionStatus
 }>()
 
-const AUTO_PLAY_MS = 4000
+const AUTO_PLAY_MS = BANNER_AUTOPLAY_MS
 
 const current = ref(0)
 const isHover = ref(false)

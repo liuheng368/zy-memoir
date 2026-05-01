@@ -42,6 +42,8 @@ import { useMp3Encode } from '@/composables/useMp3Encode'
 import { useAudioPlayer } from '@/composables/useAudioPlayer'
 import { toast } from '@/composables/useToast'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import AvatarCropper from '@/components/common/AvatarCropper.vue'
+import Lightbox from '@/components/common/Lightbox.vue'
 import { defaultStudentAvatar } from '@/utils/defaultAvatar'
 import { isNetworkError, networkErrorMessage } from '@/utils/network'
 import {
@@ -191,7 +193,44 @@ async function onAvatarPicked(e: Event): Promise<void> {
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
-  await doUploadAvatar(file)
+  // PRD v0.4 二期 / spec §6.1：先进裁剪弹层，确认后再走 doUploadAvatar
+  cropperFile.value = file
+  cropperOpen.value = true
+}
+
+/* -------------------- 头像裁剪 / 头像放大（PRD v0.4 二期） -------------------- */
+const cropperOpen = ref(false)
+const cropperFile = ref<File | null>(null)
+const lightboxOpen = ref(false)
+
+const lightboxSrc = computed(
+  () => detail.value?.avatar?.url || (detail.value ? defaultStudentAvatar(detail.value.gender) : ''),
+)
+
+function onCropConfirmed(blob: Blob): void {
+  if (!cropperFile.value) return
+  const orig = cropperFile.value
+  // 输出 jpeg；保留原文件名前缀方便排查
+  const filename = orig.name.replace(/\.[^.]+$/, '') + '.jpg'
+  const cropped = new File([blob], filename, { type: blob.type || 'image/jpeg' })
+  cropperFile.value = null
+  void doUploadAvatar(cropped)
+}
+
+function onCropCancel(): void {
+  cropperFile.value = null
+}
+
+function onCropReselect(): void {
+  // 关闭裁剪弹层，重新弹出文件选择器
+  cropperOpen.value = false
+  cropperFile.value = null
+  setTimeout(() => avatarInputRef.value?.click(), 50)
+}
+
+function onAvatarImgClick(): void {
+  if (!detail.value) return
+  lightboxOpen.value = true
 }
 
 async function doUploadAvatar(file: File): Promise<void> {
@@ -508,6 +547,8 @@ function recBlobKb(): string {
                   :src="detail.avatar?.url || defaultStudentAvatar(detail.gender)"
                   :alt="detail.name"
                   decoding="async"
+                  class="avatar-img"
+                  @click="onAvatarImgClick"
                 />
                 <div v-if="avatarStatus === 'uploading'" class="avatar-mask">上传中…</div>
               </div>
@@ -643,6 +684,21 @@ function recBlobKb(): string {
                       ></span>
                     </span>
                   </div>
+                  <!-- PRD v0.4 二期 / spec §6.3：owner 显式删除按钮（@click.stop 防长按冒泡） -->
+                  <button
+                    v-if="effectiveMode === 'owner'"
+                    type="button"
+                    class="rec-delete"
+                    aria-label="删除录音"
+                    @click.stop="
+                      pendingDelete = { kind: 'recording', id: r.id, label: '这段录音' };
+                      confirmOpen = true;
+                      cancelLongPress();
+                    "
+                    @pointerdown.stop
+                  >
+                    🗑
+                  </button>
                 </li>
               </ul>
               <p v-else class="empty-hint">还没有录音</p>
@@ -738,6 +794,22 @@ function recBlobKb(): string {
         </div>
       </div>
     </transition>
+
+    <!-- PRD v0.4 二期 / spec §6.1：头像裁剪弹层 -->
+    <AvatarCropper
+      v-model:open="cropperOpen"
+      :file="cropperFile"
+      @confirm="onCropConfirmed"
+      @cancel="onCropCancel"
+      @reselect="onCropReselect"
+    />
+
+    <!-- PRD v0.4 二期 / spec §6.2：头像放大遮罩（仅头像，不接入照片墙） -->
+    <Lightbox
+      v-model:open="lightboxOpen"
+      :src="lightboxSrc"
+      :alt="detail?.name || '头像'"
+    />
   </Teleport>
 </template>
 
@@ -873,6 +945,9 @@ function recBlobKb(): string {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.avatar-wrap .avatar-img {
+  cursor: zoom-in;
 }
 .avatar-wrap.gender-female {
   background: linear-gradient(135deg, #ffd1d6 0%, #ff7e8b 100%);
@@ -1083,6 +1158,25 @@ function recBlobKb(): string {
   height: 100%;
   background: var(--color-primary);
   transition: width 0.15s linear;
+}
+.rec-delete {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #fdecec;
+  color: #c94646;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+  margin-left: 6px;
+}
+.rec-delete:hover {
+  background: #f7d6d6;
 }
 .rec-add {
   appearance: none;
