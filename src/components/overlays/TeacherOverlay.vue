@@ -378,9 +378,7 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
               <span v-if="detail">{{ detail.name }}</span>
               <span v-else-if="props.teacherId !== null">老师 #{{ props.teacherId }}</span>
               <span v-if="detail" class="role-badge">{{ ROLE_LABEL[detail.role] }}老师</span>
-              <span class="mode-badge" :class="effectiveMode">
-                {{ effectiveMode === 'owner' ? '主态' : '只读' }}
-              </span>
+              <span v-if="effectiveMode === 'owner'" class="mode-badge owner">主态</span>
             </h2>
             <button type="button" class="close-btn" aria-label="关闭" @click="close">×</button>
           </header>
