@@ -1178,3 +1178,118 @@ interface UploadTask {
   - **LOW-1**：登录浮层（StudentLogin / TeacherLogin）仅用 `opacity` Transition，未实现 G11 / Q-OVERLAY-MOTION 决议的 PC `scale(0.94→1)` + 移动端 Bottom Sheet。考虑到 Q-OVERLAY-MOTION 主要面向交互浮层（[`StudentOverlay`](src/components/overlays/StudentOverlay.vue) / [`TeacherOverlay`](src/components/overlays/TeacherOverlay.vue) 已正确落地），建议在 plan 显式追加「登录浮层沿用居中卡 + opacity，不参与 Q-OVERLAY-MOTION」作为补充决议。
   - **LOW-2**：[`StudentLogin.vue`](src/views/StudentLogin.vue) `ERROR_TEXT.INVALID_INPUT = '请检查学号与姓名'` 与 spec 反例文案 "学号或姓名错误" 存在轻微漂移，建议二者择一统一。
   - 用户接受上述 2 MEDIUM + 2 LOW 不阻塞合入后，可执行 `/assist done` 进入阶段 5。
+
+---
+
+## 部署方案 K：EdgeOne Pages + Edge Function 反代（CORS 绕行 / 零成本）
+
+### 背景与约束
+
+CloudBase 默认静态托管域名 `*.tcloudbaseapp.com` 在国内首次访问时会触发**腾讯云风险拦截页**（家长端体验差），但免费版**禁止**通过 [`cloudbase.envDomainManagement`](.agents/skills/cloudbase/SKILL.md) 添加自定义 Web 安全域名（CORS 白名单）—— `CreateAuthDomain` 直接返回「当前套餐无法执行此操作」。
+
+排查矩阵后唯一同时满足「¥0 / 云函数可用 / 无风险页 / 无需备案域名」四条硬约束的方案为 **K**：把前端部署到 EdgeOne Pages（自带 `*.pages.edgeone.app` 免备案默认域），把云函数请求经 EdgeOne Edge Function 反代到 CloudBase API 域名（绕开浏览器 CORS）。
+
+| 方案 | 成本 | 云函数 | 风险页 | 需自定义域名 | 命中 |
+| --- | --- | --- | --- | --- | --- |
+| F 升级 CloudBase 基础版 + 加白 GH Pages | ¥108/年 | ✅ | ✅ | ❌ | 出 |
+| H 备案域名 CNAME 到 CloudBase 静态托管 | ¥0 | ✅ | ✅ | **要** | 出 |
+| I 保留 tcloudbaseapp.com + 话术引导 | ¥0 | ✅ | ❌（有页） | ❌ | 出 |
+| J EdgeOne Pages 纯部署（无反代） | ¥0 | ❌（CORS 死） | ✅ | ❌ | 出 |
+| **K EdgeOne Pages + Edge Function 反代** | **¥0** | **✅** | **✅** | **❌** | **唯一通** |
+
+### 执行清单（一次到位）
+
+#### 1. EdgeOne Pages 接入（用户操作，10 分钟）
+
+- 入口：[https://console.cloud.tencent.com/edgeone/pages](https://console.cloud.tencent.com/edgeone/pages)
+- 「创建项目」→「Git 仓库导入」→ 选 `liuheng368/zy-memoir`
+- 框架预设：**Vite**
+- 构建命令：`pnpm build`（**不要**用 `build:gh`，EdgeOne 部署在根路径，不需要 `/zy-memoir/` 前缀）
+- 输出目录：`dist`
+- 监听分支：`main`
+- 部署成功后会分配一个免备案的 `xxx.pages.edgeone.app` 域名，国内直连，无风险页
+
+#### 2. 加 Edge Function 反代云函数（Agent 操作）
+
+新建 [`functions/tcb/[[default]].ts`](functions/tcb/[[default]].ts)（EdgeOne Pages 约定路径）：
+
+- 把 `/tcb/*` 的请求透传到 `https://${envId}.ap-shanghai.tcb-api.tencentcloudapi.com/*`
+- 补 `Access-Control-Allow-Origin: *` 等 CORS 头
+- 保留 method / body / headers / query string 完整透传
+
+#### 3. 改 [`src/api/cloudbase.ts`](src/api/cloudbase.ts)（Agent 操作）
+
+[`@cloudbase/js-sdk`](src/api/cloudbase.ts:1) 不支持改 endpoint，所以**在 SDK 加载前 monkey-patch `fetch` 与 `XMLHttpRequest`**：把所有 `*.tcb-api.tencentcloudapi.com` 的请求 URL 重写到当前域名 `/tcb/*`，让 EdgeOne Edge Function 接管。这是业界绕 CloudBase SDK 限制的标准做法。
+
+#### 4. 调整 [`vite.config.ts`](vite.config.ts)（Agent 操作）
+
+EdgeOne Pages 部署后 base 仍为 `/`，[`vite.config.ts`](vite.config.ts) 现有 `process.env.GH_PAGES === '1' ? '/zy-memoir/' : '/'` 三元保留即可（互不影响）。
+
+#### 5. 配 EdgeOne Pages 项目环境变量（用户操作）
+
+在 EdgeOne Pages 控制台「环境变量」加一条：
+
+- `VITE_TCB_ENV_ID = zy-memoir-d5gaxbvyxe80564f4`
+
+### 角色分工
+
+| 步骤 | 执行方 | 预计耗时 |
+| --- | --- | --- |
+| 1. 接入 EdgeOne Pages 控制台、绑 GitHub | 用户 | 10 分钟 |
+| 5. 配 Pages 项目环境变量 | 用户 | 1 分钟 |
+| 2. Edge Function 反代代码 | Agent | 30 分钟 |
+| 3. SDK fetch/XHR monkey-patch | Agent | 30 分钟 |
+| 4. `vite.config.ts` 校验 | Agent | 5 分钟 |
+| 联调验证 | 双方 | 15 分钟 |
+
+### 验收 AC
+
+| AC | 描述 | 验证 |
+| --- | --- | --- |
+| AC-K-1 | 访问 `xxx.pages.edgeone.app` 首屏 200，无风险拦截页 | 真机 / 浏览器 |
+| AC-K-2 | 浏览器 Network 面板看到云函数请求走 `/tcb/*`，状态 200，无 CORS 报错 | DevTools |
+| AC-K-3 | 学生登录 / 老师登录 / 录音上传 / Banner 加载等 11 个云函数全部可正常调用 | 真机 |
+| AC-K-4 | 关闭 GH Pages workflow 触发器（保留代码以便回退） | GitHub Actions |
+
+### 实施计划
+
+#### 组 K1：Edge Function 反代（Agent）
+
+- [ ] 新建 [`functions/tcb/[[default]].ts`](functions/tcb/[[default]].ts)：透传 method/body/headers/query 到 `https://${VITE_TCB_ENV_ID}.ap-shanghai.tcb-api.tencentcloudapi.com/*`
+- [ ] 反代响应附加 CORS 头：`Access-Control-Allow-Origin: *` / `Access-Control-Allow-Headers: *` / `Access-Control-Allow-Methods: *`
+- [ ] 处理 OPTIONS 预检请求
+
+#### 组 K2：前端 SDK 适配（Agent）
+
+- [ ] 在 [`src/api/cloudbase.ts`](src/api/cloudbase.ts) 中，先于 `cloudbase.init()` 注入 `window.fetch` 与 `XMLHttpRequest.prototype.open` 拦截器，把 `tcb-api.tencentcloudapi.com` 请求改写到同源 `/tcb/*`
+- [ ] 上线灰度开关：`VITE_TCB_PROXY=edgeone` 启用 patch，缺省/`origin` 走原始 SDK，便于本地开发与回退
+- [ ] 单元测试 `ensureAnonAuth` / `callFunction` 仍能跑通（用 mock fetch）
+
+#### 组 K3：用户控制台操作（用户）
+
+- [ ] EdgeOne Pages 创建项目并绑 GitHub
+- [ ] 配 `VITE_TCB_ENV_ID` 环境变量
+- [ ] 取得 `xxx.pages.edgeone.app` 默认域名并贴回会话
+
+#### 组 K4：联调与回归（双方）
+
+- [ ] 完成 AC-K-1 ~ AC-K-4 真机走查
+- [ ] 关闭 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) 的 push 触发器（仅保留 `workflow_dispatch`），避免双链路混淆
+- [ ] 把家长端访问入口从 `liuheng368.github.io/zy-memoir/` 切换到 `xxx.pages.edgeone.app`，更新内部分享话术
+
+### 方案 K 澄清事项
+
+#### Q-K-1：是否也代理静态资源？
+
+- [ ] **方案 A**：仅代理 `/tcb/*`，静态资源仍由 EdgeOne Pages CDN 直出（默认） ✅ 推荐
+- [ ] **方案 B**：所有请求走 Edge Function（成本与冷启动开销更高，无收益）
+
+#### Q-K-2：fetch 拦截方式
+
+- [ ] **方案 A**：直接覆盖 `window.fetch` + `XMLHttpRequest.prototype.open`，URL 字符串替换（侵入小、兼容好）✅ 推荐
+- [ ] **方案 B**：用 Service Worker 拦截（PWA 化，复杂度高，对老 Safari 兼容差）
+
+#### Q-K-3：环境变量在 Edge Function 里如何读 envId
+
+- [ ] **方案 A**：硬编码 `zy-memoir-d5gaxbvyxe80564f4` 到 Edge Function 源码（仅一处，可读性强）✅ 推荐
+- [ ] **方案 B**：通过 EdgeOne Pages 控制台为 Function 配 `TCB_ENV_ID`，运行时读 `globalThis.TCB_ENV_ID`（多环境时再切换）
