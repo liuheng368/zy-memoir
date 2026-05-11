@@ -9,7 +9,11 @@
     />
     <!-- 仅班级群分享访问，禁止搜索引擎收录（spec Q14） -->
     <meta name="robots" content="noindex,nofollow" />
-    <meta name="theme-color" content="#ffffff" />
+    <!-- iOS Safari 顶部状态栏 + 底部 minimal URL bar 的 chrome 颜色由 theme-color 决定，
+         CSS 改不到。设为 page-bg --color-bg(#fff8f5) 让 chrome 与页面无缝；
+         浮层激活时由 useOverlayThemeColor 动态切到「遮罩叠加在 #fff8f5 上的精确色」，
+         视觉上让半透明遮罩"包裹"住 status bar / URL bar 区。 -->
+    <meta name="theme-color" content="#fff8f5" />
     <meta name="format-detection" content="telephone=no" />
     <title>钟园幼儿园 2024 届大二班 · 班级回忆录</title>
   </head>

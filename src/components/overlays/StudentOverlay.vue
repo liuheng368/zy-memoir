@@ -41,6 +41,7 @@ import { canRecord, useRecorder } from '@/composables/useRecorder'
 import { useMp3Encode } from '@/composables/useMp3Encode'
 import { useAudioPlayer } from '@/composables/useAudioPlayer'
 import { toast } from '@/composables/useToast'
+import { overlayMaskColor, useOverlayThemeColor } from '@/composables/useOverlayThemeColor'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import AvatarCropper from '@/components/common/AvatarCropper.vue'
 import Lightbox from '@/components/common/Lightbox.vue'
@@ -85,6 +86,13 @@ const effectiveMode = computed<'owner' | 'visitor'>(() => {
   if (studentProfile.value?.studentId !== props.studentId) return 'visitor'
   return props.mode === 'owner' ? 'owner' : 'visitor'
 })
+
+// iOS Safari：浮层 open 时把 status bar / URL bar 的 chrome 颜色切到「mask 叠加 page-bg」
+// 后的近似色，让两条 chrome 区域跟随浮层一起变暗，视觉上「包裹」住整个屏幕
+useOverlayThemeColor(
+  () => props.open,
+  overlayMaskColor(20, 20, 20, 0.42), // 与 .overlay-mask background 同源
+)
 
 /* -------------------- 详情数据加载 -------------------- */
 const detail = ref<StudentDetail | null>(null)

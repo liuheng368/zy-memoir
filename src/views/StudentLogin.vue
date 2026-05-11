@@ -10,6 +10,7 @@ import { computed, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { studentLogin, AuthApiError, type AuthErrorCode } from '@/api/auth'
 import LoginSkipFooter from '@/components/LoginSkipFooter.vue'
+import { overlayMaskColor, useOverlayThemeColor } from '@/composables/useOverlayThemeColor'
 import Home from './Home.vue'
 
 const auth = useAuthStore()
@@ -22,6 +23,12 @@ const overlayVisible = computed(() => {
   if (auth.isGuest) return auth.showLoginPanel
   return false
 })
+
+// iOS Safari：登录浮层 open 时联动 chrome 颜色，包裹 status bar / URL bar
+useOverlayThemeColor(
+  () => overlayVisible.value,
+  overlayMaskColor(0, 0, 0, 0.5), // 与 .overlay-mask background 同源
+)
 
 const studentIdInput = ref('')
 const nameInput = ref('')

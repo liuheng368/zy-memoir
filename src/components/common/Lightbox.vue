@@ -9,6 +9,7 @@
  * - 仅头像点击接入（避免与照片墙长按手势冲突）
  */
 import { onBeforeUnmount, watch } from 'vue'
+import { overlayMaskColor, useOverlayThemeColor } from '@/composables/useOverlayThemeColor'
 
 interface Props {
   open: boolean
@@ -20,6 +21,12 @@ const props = withDefaults(defineProps<Props>(), { alt: '' })
 const emit = defineEmits<{
   (e: 'update:open', v: boolean): void
 }>()
+
+// iOS Safari：lightbox 几乎全黑遮罩 → chrome 也跟着深下来
+useOverlayThemeColor(
+  () => props.open,
+  overlayMaskColor(10, 10, 10, 0.92),
+)
 
 function close() {
   emit('update:open', false)

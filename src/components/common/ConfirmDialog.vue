@@ -9,6 +9,7 @@
  * 视觉：居中卡片 + 顶层遮罩；与 Toast 共栈但 z-index 略低
  */
 import { onBeforeUnmount, ref, watch } from 'vue'
+import { overlayMaskColor, useOverlayThemeColor } from '@/composables/useOverlayThemeColor'
 
 interface Props {
   open: boolean
@@ -33,6 +34,12 @@ const emit = defineEmits<{
   (e: 'ok'): void
   (e: 'cancel'): void
 }>()
+
+// iOS Safari：确认弹窗 open 时联动 chrome 颜色（多层栈管理：可叠加在浮层之上）
+useOverlayThemeColor(
+  () => props.open,
+  overlayMaskColor(20, 20, 20, 0.42),
+)
 
 const dialogRef = ref<HTMLDivElement | null>(null)
 

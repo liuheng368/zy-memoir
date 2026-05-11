@@ -27,6 +27,7 @@ import { canRecord, useRecorder } from '@/composables/useRecorder'
 import { useMp3Encode } from '@/composables/useMp3Encode'
 import { useAudioPlayer } from '@/composables/useAudioPlayer'
 import { toast } from '@/composables/useToast'
+import { overlayMaskColor, useOverlayThemeColor } from '@/composables/useOverlayThemeColor'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import AvatarCropper from '@/components/common/AvatarCropper.vue'
 import Lightbox from '@/components/common/Lightbox.vue'
@@ -57,6 +58,12 @@ const effectiveMode = computed<'owner' | 'visitor'>(() => {
   if (teacherProfile.value?.teacherId !== props.teacherId) return 'visitor'
   return props.mode === 'owner' ? 'owner' : 'visitor'
 })
+
+// iOS Safari：浮层 open 时联动 chrome 颜色，包裹 status bar / URL bar
+useOverlayThemeColor(
+  () => props.open,
+  overlayMaskColor(20, 20, 20, 0.42),
+)
 
 /* -------------------- 详情数据 -------------------- */
 const detail = ref<TeacherFull | null>(null)

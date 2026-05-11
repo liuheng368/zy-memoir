@@ -14,12 +14,19 @@
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { AVATAR_CROP_OUTPUT_PX } from '@/utils/constants'
+import { overlayMaskColor, useOverlayThemeColor } from '@/composables/useOverlayThemeColor'
 
 interface Props {
   open: boolean
   file: File | null
 }
 const props = defineProps<Props>()
+
+// iOS Safari：裁剪弹层 open 时联动 chrome 颜色
+useOverlayThemeColor(
+  () => props.open,
+  overlayMaskColor(20, 20, 20, 0.55),
+)
 
 const emit = defineEmits<{
   (e: 'update:open', v: boolean): void
