@@ -49,6 +49,8 @@ cloudfunctions/**/node_modules/
 *.tmp
 .cache/
 .secrets/
+# Vite 依赖预构建缓存 / 临时目录
+.vite/
 
 # ---------- 月度备份产物（plan G12 / scripts/backup.mjs）----------
 # 备份 JSON / COS 拉取下来的图片 / 录音不入仓库
