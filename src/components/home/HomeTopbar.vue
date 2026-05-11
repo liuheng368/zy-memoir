@@ -8,7 +8,11 @@
  *   - 触发：
  *     · 游客 / 未登录 → 点徽标 = openLoginPanel（spec §2 ① 提示去登录入口）
  *     · 已登录       → 退出登录
- *     · admin        → ⚙ 管理（仅 admin 可见，spec §1.1 ④）
+ *     · ⚙ 多语义按钮（v0.7）：
+ *         - 学生（v0.7 新增）→ emit('open-self-editor')，由 Home.vue 打开自己的 StudentOverlay
+ *         - 老师 / 管理员 → 跳 `/admin` 路由（v0.6 行为不变）
+ *         - 游客 / 未初始化 → 完全不渲染
+ *       图标视觉沿用同一个 ⚙；title / aria-label 按角色文案区分
  *
  * G11 新增：游客 / 未登录态的「去登录」气泡（plan G11 视觉打磨）
  *   - mount 后 800 ms 首次自动浮现一次（避免与初次内容渲染抢焦点）
@@ -22,6 +26,11 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTES } from '@/utils/constants'
+
+const emit = defineEmits<{
+  /** v0.7：学生点 ⚙ → 由 Home.vue 调 handleStudentClick(self) 打开自己浮层 */
+  (e: 'open-self-editor'): void
+}>()
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -114,7 +123,30 @@ function handleLogout() {
   auth.logout()
 }
 
-function gotoAdmin() {
+/* -------------------- v0.7 ⚙ 多语义入口 -------------------- */
+/** 老师 / 管理员可见（v0.6） — 跳 /admin 主页合影管理 */
+const canSeeAdminGear = computed(() => auth.canManageBanners)
+/** 学生可见（v0.7） — emit 给 Home.vue 打开自己的 StudentOverlay owner 模式 */
+const canSeeStudentGear = computed(
+  () => auth.role === 'student' && !!auth.studentProfile?.studentId,
+)
+/** ⚙ 总开关：任一分支命中即渲染 */
+const showGearBtn = computed(() => canSeeAdminGear.value || canSeeStudentGear.value)
+/** 文案：学生「我的设置」；老师 / 管理员「主页合影管理」 */
+const gearTitle = computed(() =>
+  canSeeStudentGear.value ? '我的设置' : '主页合影管理',
+)
+const gearAriaLabel = computed(() =>
+  canSeeStudentGear.value ? '打开我的设置' : '进入主页合影管理',
+)
+
+function handleGearClick() {
+  if (canSeeStudentGear.value) {
+    // 学生 v0.7 分支：让 Home.vue 用 auth.studentProfile.studentId 打开自己浮层
+    emit('open-self-editor')
+    return
+  }
+  // 老师 / 管理员（v0.6）：跳路由
   router.push({ path: ROUTES.ADMIN })
 }
 
@@ -189,12 +221,12 @@ onBeforeUnmount(() => {
       </button>
 
       <button
-        v-if="auth.canManageBanners"
+        v-if="showGearBtn"
         type="button"
         class="icon-btn admin-btn"
-        title="主页合影管理"
-        aria-label="进入主页合影管理"
-        @click="gotoAdmin"
+        :title="gearTitle"
+        :aria-label="gearAriaLabel"
+        @click="handleGearClick"
       >
         ⚙
       </button>

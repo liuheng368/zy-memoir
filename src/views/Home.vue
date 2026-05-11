@@ -62,6 +62,20 @@ function handleStudentClick(s: StudentSummary): void {
   studentOverlayOpen.value = true
 }
 
+/**
+ * v0.7：HomeTopbar 顶栏 ⚙ → 学生「我的设置」入口
+ * 直接以 owner 模式打开自己的浮层（等价于在头像墙上点到自己）。
+ * mode 由 studentOverlayMode computed 自动判定为 'owner'：
+ *   role==='student' && studentProfile.studentId === currentStudentId
+ */
+function openSelfStudentEditor(): void {
+  if (role.value !== 'student') return
+  const sid = studentProfile.value?.studentId
+  if (!sid) return
+  currentStudentId.value = sid
+  studentOverlayOpen.value = true
+}
+
 function onStudentOverlayUpdated(): void {
   // 数据变更后刷新学生列表（更新照片 / 录音计数 + 头像缩略图）
   void classData.fetchStudents(true)
@@ -108,7 +122,7 @@ function retryStudents() {
 
 <template>
   <main class="home">
-    <HomeTopbar />
+    <HomeTopbar @open-self-editor="openSelfStudentEditor" />
 
     <BannerCarousel :banners="banners.data" :status="banners.status" />
 

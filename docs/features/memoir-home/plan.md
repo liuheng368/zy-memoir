@@ -1206,6 +1206,62 @@ interface UploadTask {
 
 ---
 
+## 三期实现计划（v0.7 · 学生 ⚙ 设置入口）
+
+> 对应 [`spec.md` Q23](./spec.md)。极小补丁，零后端改动；只在 `HomeTopbar.vue` 顶栏 ⚙ 上加学生分支，让 `Home.vue` 直接复用既有 `handleStudentClick` 打开自己浮层。
+
+### 现状分析
+
+- 学生主态编辑能力在一期就已通过 [`StudentOverlay.vue`](src/components/overlays/StudentOverlay.vue) owner 模式实现（编辑简介 / 增删照片录音 / 换头像）；触发路径：[`Home.vue::handleStudentClick`](src/views/Home.vue:60-63) `currentStudentId.value = s.id; studentOverlayOpen.value = true`。
+- mode 判定 [`Home.vue::studentOverlayMode`](src/views/Home.vue:50-58)：`role === 'student' && studentProfile.studentId === currentStudentId` → `'owner'`；条件天然成立 → 学生点 ⚙ 等价点头像墙上自己。
+- ⚙ 入口当前判定 [`HomeTopbar.vue:192`](src/components/home/HomeTopbar.vue:192) `v-if="auth.canManageBanners"` —— 只对 admin / teacher 显示 → v0.7 要扩到 student。
+
+### 文件改动清单
+
+| 文件 | 变更内容 |
+| --- | --- |
+| [`src/components/home/HomeTopbar.vue`](src/components/home/HomeTopbar.vue) | ⚙ 按钮可见性扩展为 `auth.canManageBanners \|\| auth.role === 'student'`；click handler 按角色分流（学生 → emit `open-self-editor`；老师 / 管理员 → 仍 `gotoAdmin`）；title / aria-label 按角色文案区分 |
+| [`src/views/Home.vue`](src/views/Home.vue) | 监听 `<HomeTopbar @open-self-editor>` → 调 `handleStudentClick({ id: studentProfile.studentId })`；保护：`role === 'student' && studentProfile?.studentId` 才执行 |
+
+### 实现 checkbox
+
+#### 组 V07-1：HomeTopbar.vue 学生分支
+
+- [x] V07-1-1 引入 `defineEmits<{ 'open-self-editor': []; }>()`
+- [x] V07-1-2 新增 `canSeeAdminGear` / `canSeeStudentGear` 双 computed（命名清晰；前者复用 `auth.canManageBanners`，后者 `role==='student' && !!studentProfile?.studentId`）
+- [x] V07-1-3 ⚙ 按钮 `v-if="canSeeAdminGear || canSeeStudentGear"`；title / aria-label 按 `canSeeStudentGear ? '我的设置' : '主页合影管理'` 切换
+- [x] V07-1-4 click handler `handleGearClick`：student → `emit('open-self-editor')`；其它 → `gotoAdmin()`
+
+#### 组 V07-2：Home.vue 接事件
+
+- [x] V07-2-1 `<HomeTopbar @open-self-editor="openSelfStudentEditor" />`
+- [x] V07-2-2 `function openSelfStudentEditor()`：再校验一次 `role === 'student' && studentProfile?.studentId`（防御）；满足 → `handleStudentClick({ id: studentProfile.studentId, name: '', gender: 'unknown' } as StudentSummary)` 复用既有路径
+- [x] V07-2-3 验证 `studentOverlayMode` computed 在此分支自动判定为 `'owner'`（无须改）
+
+### 验收 AC（同步写入 [`AC-CHECKLIST.md`](./AC-CHECKLIST.md)）
+
+| AC | 描述 | 验证 |
+| --- | --- | --- |
+| AC-23 | 学生登录后顶栏右上角出现 ⚙；title="我的设置" | 真机 / E2E |
+| AC-24 | 学生点 ⚙ → `<StudentOverlay>` 立即弹出，且 mode='owner'（编辑入口可见、可改简介 / 增删照片录音 / 换头像） | 真机 |
+| AC-25 | 学生 ⚙ 不跳路由（仍在 `/`），关闭浮层后回到原滚动位置 | 真机 |
+| AC-26 | 老师 / 管理员的 ⚙ 行为完全不变（点击仍跳 `/admin`） | 真机回归 |
+| AC-27 | 游客 / 未登录态 ⚙ **完全不渲染**（DOM 不出现，避免 v0.6 老回归点失守） | 真机 / 选择器断言 |
+
+### v0.7 方案澄清事项
+
+#### Q-PLAN-V07-1：⚙ 图标多语义会不会让用户困惑？
+
+- [x] **决议（v0.7）**：不引入新图标。理由：①顶栏宽度紧（移动端必须 ≤ 一行），多塞图标更挤；②⚙ 在不同角色下**只对该角色显示一种语义**，不会出现「同一个用户看到两种含义」；③hover/长按 title 文案区分语义足够（学生："我的设置"；老师 / 管理员："主页合影管理"） ✅
+- [ ] ~~方案 B：学生用 👤 / ✏️ 等独立图标~~ — 未采纳：UI 控件膨胀，无明显收益
+- [ ] ~~方案 C：折叠到右侧抽屉菜单~~ — 未采纳：抽屉是 v1.0 重构话题，本期不引入
+
+#### Q-PLAN-V07-2：是否需要在 `<StudentOverlay>` 内显示"通过 ⚙ 进入"的视觉差异？
+
+- [x] **决议（v0.7）**：不需要差异化。理由：①浮层内部交互完全等同从头像墙点开；②引入差异会让 owner 模式有两套视觉，违背"一份资料一种编辑入口"的简洁性 ✅
+
+---
+
 ## 代码审查
 
 <!-- 阶段 4 填写：实现计划全部 [x] 后 -->
