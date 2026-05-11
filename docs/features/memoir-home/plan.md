@@ -2,7 +2,7 @@
 
 > **文档分工**：**`plan.md`** 承载**技术方案**：**`## 概述`**、**`## 现状分析`**、**`## 页面交互细节`**（布局引用 spec/source、按模块拆交互、**本页**接口 path）、**`## API 梳理`**（接口：**方法**、**路径**、**Response**、**字段映射**）、**`## 架构设计`**（含 **功能模块划分**与 **`### 技术选型 / 约束`**）、**`## 技术方案`**（实现级：**文件改动清单**、**新增字段（预估）**）、**`## 方案澄清事项`**（与 [`spec.md`](./spec.md) **`### 澄清事项`** 形态一致：**`#### Qn`** + **`- [ ]`…`⚠️` / `- [x]`…`✅`**；**方案 / 实现向**）、**`## 风险与未决事项`**、**`## 验收标准`（AC）**、**`## 开发任务`**（层级勾选清单：按文件/Screen 拆解 UI 与逻辑）、**`## 实现计划`**、**`## 代码审查`**。**行为级页面描述与线框/截图** 以 [`spec.md`](./spec.md) **`## 页面交互描述`**（及 [`source/`](./source/)）为准；**`plan.md`** 本节做**工程向细化**并与 spec **互链**。**原始 PRD** 留存于 [`prd/`](./prd/)（主稿 [`prd/prd.md`](./prd/prd.md)）。
 >
-> **创建日期**：2026-04-29 · **最近更新**：2026-04-30（**v0.3**：登录浮层取消 Tab，改为按 URL 路由直接区分角色：`/` 学生 / `/teacher` 老师 / `/admin?token=` 管理员；**两个浮层完全独立、浮层内不互通**；新增 **Q-PLAN-16 登录浮层路由分工** + **Q-PLAN-17 浮层互通策略**）
+> **创建日期**：2026-04-29 · **最近更新**：2026-05-11（**v0.6**：同步 PRD v0.4 / spec v0.6「老师角色获得主页合影管理入口」—— `addBanner` / `removeBanner` 云函数从「ADMIN_HMAC_KEY 单 key + role==='admin' only」改造为「**双 key 验签**：先 ADMIN_HMAC_KEY → role==='admin' 放行；失败再 AUTH_HMAC_KEY → role==='teacher' 放行；其他一律 401/403」；前端 `auth.canManageBanners` getter 收敛 ⚙ 入口 / `/admin` 守卫 / Admin 视图三处可见性；`uploadedBy` 字段记录实际操作角色（`'admin'` / `'teacher:<teacherId>'`）；新增 **Q-PLAN-22 老师合影鉴权双 key 方案**；M-ADMIN / API-19 / API-20 / AC-9 / G9 / G14 同步刷新；**v0.5**：纳入 PRD v0.4 「二期功能」四条 + Q-PLAN-2-1~3；**v0.3**：登录浮层取消 Tab，改为按 URL 路由直接区分角色：`/` 学生 / `/teacher` 老师 / `/admin?token=` 管理员；**两个浮层完全独立、浮层内不互通**；新增 **Q-PLAN-16 登录浮层路由分工** + **Q-PLAN-17 浮层互通策略**）
 
 ## 概述
 
@@ -63,8 +63,8 @@
 
 #### M-① 顶栏 `HomeTopbar.vue`
 
-- **复用**：`<UserBadge />`（角色徽标，新增 `guest` 视觉态）；`<AdminEntry v-if="isAdmin" />`。
-- **可见性**：`isAdmin` 来自 `authStore.role === 'admin'`；学生 / 老师 / **游客**均**不渲染** ⚙ 入口。
+- **复用**：`<UserBadge />`（角色徽标，新增 `guest` 视觉态）；`<AdminEntry v-if="canManageBanners" />`。
+- **可见性**（v0.6）：⚙ 入口由 `authStore.canManageBanners` getter 决定 = `role === 'admin' || role === 'teacher'`；学生 / 游客 / 未登录态**不渲染** ⚙ 入口。
 - **触发接口**：
   - 学生 / 老师 / 管理员徽标气泡内「退出登录」→ `auth.logout()`（清本地 store + 跳 `/login`）；
   - **游客徽标**气泡内「**去登录**」→ `auth.openLoginPanel()`（重新挂载登录浮层，不清空浏览状态）。
@@ -129,10 +129,13 @@
 - **触发接口**：`teachersService.detail(id)`（**API-15**）/ `updateAvatar`（**API-16**）/ `addRecording` `removeRecording`（**API-17 / API-18**）。
 - **AC 映射**：AC-8 / AC-12 / AC-14 / AC-15 / **AC-17**。
 
-#### M-ADMIN 管理员页 `Admin.vue`
+#### M-ADMIN 主页合影管理页 `Admin.vue`（v0.6 老师 + 管理员共用）
 
-- 进入路由 `/admin?token=xxx` → 调 `auth.adminCheck(token)`（**API-4**）→ 通过则写 `authStore.role = 'admin'`，否则跳 `/login`（**不自动转游客态**：`/admin` 路径必须显式 token 校验）。
-- 网格列出合影；上传 / 删除合影；
+- **进入路径**（v0.6 双角色）：
+  - **管理员**：`/admin?token=<hmac>` → `auth.adminCheck(token)`（**API-4**）→ 通过则写 `authStore.role = 'admin'`；
+  - **老师**：从 `/teacher` 登录后 `authStore.role = 'teacher' && token` 已就绪 → 直接 `router.push('/admin')` 进入；**不**走 `adminCheck`，前端守卫识别 `auth.canManageBanners` 即放行；
+  - 其它（学生 / 游客 / token 校验失败）→ 跳 `/`（与 v0.5 保持一致，**不自动转游客态**）。
+- 网格列出合影；上传 / 删除合影；老师 / 管理员**操作权限完全一致**（同入口、同弹层、同交互）。
 - **触发接口**：`bannersService.list/add/remove`（**API-5 / API-19 / API-20**）。
 - **AC 映射**：AC-4 / AC-9 / AC-10 / AC-14。
 
@@ -384,14 +387,20 @@
 
 - 同 API-14。
 
-### API-19：管理员上传合影
+### API-19：上传合影（老师 / 管理员，v0.6）
 
-- `cloudbase.uploadFile({ cloudPath: 'banners/<yyyy-MM>/<uuid>.<ext>' })` → `db.collection('banners').add({ fileID, url, createdAt: Date.now(), uploadedBy: 'admin' })`。
-- 云函数 `addBanner` 兜底校验 `Authorization` header（管理员 token）。
+- `cloudbase.uploadFile({ cloudPath: 'banners/<yyyy-MM>/<uuid>.<ext>' })` → `addBanner({ token, fileID, url, caption? })`。
+- 云函数 `addBanner` **双 HMAC key 验签**（v0.6 / Q-PLAN-22）：
+  1. 优先用 `process.env.ADMIN_HMAC_KEY` `verifyToken` → 若 `payload.role === 'admin'` 放行；
+  2. 否则用 `process.env.AUTH_HMAC_KEY` 重新 `verifyToken` → 若 `payload.role === 'teacher'` 放行；
+  3. 其它 `{ ok:false, code:'UNAUTHORIZED' | 'FORBIDDEN' }`。
+- `uploadedBy` 字段写入实际操作角色：管理员写 `'admin'`，老师写 `'teacher:<teacherId>'`，便于追溯（**不**作为权限判定依据）。
 
-### API-20：管理员删除合影
+### API-20：删除合影（老师 / 管理员，v0.6）
 
-- `db.collection('banners').doc(id).remove()` + `cloudbase.deleteFile([fileID])`。
+- `removeBanner({ token, bannerId })` → `db.collection('banners').doc(id).remove()` + `app.deleteFile([fileID])`（COS 清理失败静默吞）。
+- 云函数 `removeBanner` 鉴权同 API-19（双 key 验签 + `role in ('admin','teacher')`）。
+- 历史合影删除**不区分上传者**：任意老师 / 管理员均可删除任意 `bannerId`，与 PRD §5 / spec Q22 一致。
 
 ---
 
@@ -580,6 +589,17 @@
 
 > **注**：本表为预估，最终行数与组件拆分以实现时为准；移动 `kindergarten_students_en_keys.json` 后，仓库根可保留软链接或删除。
 
+#### v0.6 改动清单（PRD v0.4 / spec v0.6 老师合影管理权限）
+
+| 文件 | 改动类型 | 说明 |
+| ---- | -------- | ---- |
+| [`src/stores/auth.ts`](../../../src/stores/auth.ts) | 修改 | 新增 `canManageBanners` getter = `(role === 'admin' \|\| role === 'teacher') && !!token` 并 return 暴露 |
+| [`src/components/home/HomeTopbar.vue`](../../../src/components/home/HomeTopbar.vue) | 修改 | ⚙ 入口 `v-if="auth.role === 'admin'"` → `v-if="auth.canManageBanners"` |
+| [`src/router/index.ts`](../../../src/router/index.ts) | 修改 | `/admin` 守卫从「仅 admin + token」扩为 `auth.canManageBanners`（老师持 `AUTH_HMAC_KEY` token 可直入，无需 query token） |
+| [`src/views/Admin.vue`](../../../src/views/Admin.vue) | 修改 | 三处 `auth.role === 'admin'` 改 `auth.canManageBanners`；`onMounted` 老师跳过 `adminCheck` 直接 `fetchBanners`；UI 文案保持「合影管理」中性表达 |
+| [`cloudfunctions/addBanner/index.js`](../../../cloudfunctions/addBanner/index.js) | 修改 | 鉴权块改双 HMAC key 验签：先 `ADMIN_HMAC_KEY` → `role === 'admin'` 放行，失败再 `AUTH_HMAC_KEY` → `role === 'teacher'` 放行；`uploadedBy` 字段写 `'admin'` / `'teacher:<teacherId>'` |
+| [`cloudfunctions/removeBanner/index.js`](../../../cloudfunctions/removeBanner/index.js) | 修改 | 鉴权块同上（无 `uploadedBy` 写入，仅鉴权改造） |
+
 ### 新增字段（预估）
 
 > 前端语言为 **TypeScript**；以下为关键 Pinia store / UiState / 组件 props 的类型骨架。
@@ -763,6 +783,7 @@ interface UploadTask {
   - [x] **方案 B（已采纳）**：`guestPersist='session'`，sessionStorage 记住"本次会话游客"，本会话内不再弹 ✅
   - [ ] 方案 C：`guestPersist='local'`，本设备永久免弹（家长场景方便） ⚠️
 - [x] **后端兜底**（**强制**）：所有 `addStudent* / addTeacher* / addBanner / removeBanner / updateStudentIntro` 云函数必须基于 token / 角色校验，**游客无 token 直接 401**；前端 `mode=visitor` 仅是 UI 隐藏，不可作为安全边界 ✅（实现挂在 G14 强制项）
+- [x] **v0.6 调整**：`addBanner` / `removeBanner` 的 `role` 白名单从 `['admin']` 扩为 `['admin','teacher']`，并改造为**双 HMAC key 验签**（先 ADMIN_HMAC_KEY → admin 放行；失败再 AUTH_HMAC_KEY → teacher 放行）。详见 **Q-PLAN-22** ✅
 - [ ] **顶栏「去登录」入口**：`UserBadge` 在 `role==='guest'` 时显示「去登录」按钮，调用 `auth.openLoginPanel()` ⚠️（实现挂在 G11 视觉打磨）
 - [x] **Deeplink 兜底**：`StudentOverlay` / `TeacherOverlay` 在挂载时若 `authStore.role === 'guest'` 强制覆写 `mode='visitor'`，忽略外部传入 ✅（实现挂在 G6 / G7）
 - [x] **`/admin` 与游客互斥**：`/admin` 路由守卫不允许 `role==='guest'` 通过；token 校验失败仍跳 `/`，不自动转游客 ✅（已落在 [`src/router/index.ts`](../../../src/router/index.ts)）
@@ -791,6 +812,22 @@ interface UploadTask {
 
 - [x] **已采纳**：组 2 浮层只做"功能跑通"——表单 + 校验 + 调云函数 + 跳转；**动效（Bottom Sheet 弹出 / 淡出 / PC 居中过渡）整体留到 G11 / spec Q-OVERLAY-MOTION 收敛后再补** ✅
 - **取舍记录**：spec Q-OVERLAY-MOTION 仍 ⚠️ 未收敛，强行做动效会产生返工；先把功能链路 + 持久化跑顺，G11 再统一接入设计稿动效。
+
+#### Q-PLAN-22：老师合影鉴权双 HMAC key 方案（**v0.6 决议**，对齐 spec Q22 / PRD v0.4）
+
+- [x] **已采纳**：`addBanner` / `removeBanner` 云函数从「单 key + role==='admin'」改造为**双 HMAC key 验签** ✅
+  - 优先用 `process.env.ADMIN_HMAC_KEY` `verifyToken` → `payload.role === 'admin'` 放行；
+  - 失败则用 `process.env.AUTH_HMAC_KEY` 重新 `verifyToken` → `payload.role === 'teacher'` 放行；
+  - 其他一律 `{ ok:false, code:'UNAUTHORIZED' }`（双 key 都验签失败）/ `{ ok:false, code:'FORBIDDEN' }`（验签通过但 role 不在白名单 → 学生）；
+  - `uploadedBy` 字段记录实际操作者：管理员 `'admin'`，老师 `'teacher:<teacherId>'`，仅追溯不参与判定；
+  - 老师 / 管理员**操作权限完全等同**：任意一方可上传 / 删除任意 `bannerId`（不区分上传者）。
+- **取舍记录**：
+  - 备选 A：合并 `AUTH_HMAC_KEY` / `ADMIN_HMAC_KEY` 为单 key —— **拒**：丧失角色密钥独立轮换能力，管理员 token 一旦泄露需同步全员重签；
+  - 备选 B：把老师从 `AUTH_HMAC_KEY` 迁到 `ADMIN_HMAC_KEY` —— **拒**：老师同时持有学生写函数 token（如 `addTeacherRecording`），需双 key 才能并存；
+  - 备选 C：单独引入 `BANNER_HMAC_KEY` —— **拒**：复杂度高，3 套 key 同时维护无收益；
+  - **采纳**：双 key 验签兜底，零密钥迁移，云函数侧加 8 行代码即可；密钥独立轮换能力保留。
+- **影响范围**：仅 `cloudfunctions/addBanner/index.js` + `cloudfunctions/removeBanner/index.js` 鉴权块；前端通过 `auth.canManageBanners` getter 收敛三处可见性（HomeTopbar ⚙ / router 守卫 / Admin 视图）。
+- **风险与缓解**：双 key 验签会导致**单次请求最多算 2 次 HMAC**（先 admin 失败再 auth），单次开销 < 0.1 ms 可忽略；老师 token TTL 30 天到期后需重登老师页，与现状一致。
 
 ---
 
@@ -864,10 +901,12 @@ interface UploadTask {
 - **输入**：以 `teacher-a` 登录，点击主页③区**自己**头像。
 - **预期**：浮层为主态，可换头像、增删录音；点击其他老师头像**无主态浮层**（按 spec **Q-TEACHER-OTHER** 默认）。
 
-### AC-9：管理员可增删合影
+### AC-9：老师 / 管理员可增删合影（v0.6 扩老师）
 
-- **输入**：在 `/admin` 上传一张新合影 / 删除一张旧合影。
-- **预期**：上传成功后主页 ② 区轮播末尾出现新图（或顶端，按 **Q-BANNER-ORDER**）；删除成功后从轮播消失。
+- **输入 1（管理员）**：管理员持 `?token=` 进入 `/admin` 上传一张新合影 / 删除一张旧合影。
+- **输入 2（老师，v0.6 新增）**：老师在 `/teacher` 登录后，从主页顶栏 ⚙ 入口进入 `/admin` 上传 / 删除合影。
+- **输入 3（学生 / 游客，反例）**：学生 / 游客访问 `/admin` 或 ⚙ 入口不可见；强行调云函数 `addBanner` / `removeBanner` 必返回 `UNAUTHORIZED` / `FORBIDDEN`。
+- **预期**：上传成功后主页 ② 区轮播末尾出现新图（或顶端，按 **Q-BANNER-ORDER**）；删除成功后从轮播消失；老师 / 管理员**操作权限完全一致**（任意一方可删除任意合影，含他人上传的）；后端落表 `uploadedBy: 'admin'` / `'teacher:<teacherId>'` 用于追溯。
 
 ### AC-10：图片压缩 ≤ 3 MB
 
@@ -992,9 +1031,10 @@ interface UploadTask {
   - [x] `useImageCompress`（≤3 MB）
   - [x] `useMp3Encode`（lamejs）
   - [x] `useAudioPlayer`（全局单实例互斥；G4 已接入 TeacherCard / StudentOverlay / TeacherOverlay 三处播放器）
-- [x] **G9 管理员页 `Admin.vue`**
-  - [x] 路由守卫：`/admin?token=...`
+- [x] **G9 主页合影管理页 `Admin.vue`（v0.6 老师 + 管理员共用）**
+  - [x] 路由守卫：`/admin?token=...`（管理员）/ `auth.canManageBanners`（老师 / 管理员任一持 token 均放行）
   - [x] 合影网格 + 上传 + 删除（含二次确认）
+  - [x] **v0.6**：老师从 `/teacher` 登录后从主页 ⚙ 直达 `/admin`，跳过 `adminCheck`；后端云函数双 HMAC key 验签放行（详见 G14 / Q-PLAN-22）
 - [ ] **G10 共用弹层与 Toast**
   - [ ] `Toast.vue`、`ConfirmDialog.vue`、`UploadModal.vue`、`RecordModal.vue`
 - [ ] **G11 视觉打磨与边界**
@@ -1009,6 +1049,7 @@ interface UploadTask {
   - [ ] 所有写操作云函数（`updateStudentIntro / addStudentPhoto / addStudentRecording / addTeacherRecording / addBanner / removeBanner` 等）在入口处强校验 token 中的 `role`
   - [ ] 无 token / `role==='guest'` → 直接返回 `{ ok:false, code:'FORBIDDEN' }`
   - [ ] 单测覆盖：游客构造请求 → 必须被拒绝
+  - [x] **v0.6 调整**：`addBanner` / `removeBanner` 改造为**双 HMAC key 验签**（先 `ADMIN_HMAC_KEY` → admin 放行；失败再 `AUTH_HMAC_KEY` → teacher 放行；其它一律 401/403），白名单从 `['admin']` 扩为 `['admin','teacher']`，落表 `uploadedBy` 区分追溯。详见 **Q-PLAN-22**
 - [ ] **G12 部署与运维**
   - [ ] CloudBase 静态托管发布脚本
   - [ ] 云函数发布脚本
@@ -1060,8 +1101,8 @@ interface UploadTask {
 
 ### 组 5：管理员页（依赖：组 1 / 2）
 
-- [x] G9 `Admin.vue` + 合影网格（云函数 `listBanners` 公开只读 + 现场 `getTempFileURL` 刷新；admin 校验通过后由 `useClassDataStore.fetchBanners` 灌数据，3 列 grid + 空 / loading / error 三态）
-- [x] G9 上传 + 删除（含二次确认）（`useImageCompress` ≤ 3 MB → `useUpload` cloudPath `banners/<yyyy-MM>/<uuid>.<ext>` → `addBanner({token,fileID,url,caption?})`；删除走 `<ConfirmDialog>` + `removeBanner({token,bannerId})`，云函数同步 `app.deleteFile`；admin HMAC 走 `ADMIN_HMAC_KEY` 与学生 / 老师独立轮换）
+- [x] G9 `Admin.vue` + 合影网格（云函数 `listBanners` 公开只读 + 现场 `getTempFileURL` 刷新；老师 / 管理员任一身份校验通过后由 `useClassDataStore.fetchBanners` 灌数据，3 列 grid + 空 / loading / error 三态）
+- [x] G9 上传 + 删除（含二次确认）（`useImageCompress` ≤ 3 MB → `useUpload` cloudPath `banners/<yyyy-MM>/<uuid>.<ext>` → `addBanner({token,fileID,url,caption?})`；删除走 `<ConfirmDialog>` + `removeBanner({token,bannerId})`，云函数同步 `app.deleteFile`；**v0.6**：双 HMAC key 验签 = `ADMIN_HMAC_KEY` 先 → `AUTH_HMAC_KEY` 兜底，老师走 `/teacher` 登录后即可在 `/admin` 增删合影，操作权限与管理员完全等同；`uploadedBy` 写 `'admin'` / `'teacher:<teacherId>'` 用于追溯；前端可见性通过 `auth.canManageBanners` getter 收敛 ⚙ 入口 / 路由守卫 / Admin 视图三处）
 
 ### 组 6：视觉打磨与边界（依赖：所有上面）
 

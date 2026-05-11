@@ -101,6 +101,17 @@ export const useAuthStore = defineStore('auth', () => {
     if (role.value === 'guest') return '访客'
     return ''
   })
+  /**
+   * 是否拥有「主页合影管理」权限（v0.6 / PRD v0.4 / spec Q22 / plan Q-PLAN-22）
+   *
+   * - 老师 + 管理员：均允许进入 `/admin` 上传 / 删除合影；
+   * - 学生 / 游客 / 未初始化：一律不可见；
+   * - 同时限制必须持有有效 token（避免 role 残留无 token 状态被误放行）；
+   * - 用于：`HomeTopbar` ⚙ 入口、`router/index.ts` `/admin` 守卫、`Admin.vue` 视图三处可见性收敛。
+   */
+  const canManageBanners = computed(
+    () => (role.value === 'admin' || role.value === 'teacher') && !!token.value,
+  )
 
   // ---- helpers ----
   function persistLogin() {
@@ -206,6 +217,7 @@ export const useAuthStore = defineStore('auth', () => {
     isUninitialized,
     isReadOnly,
     displayName,
+    canManageBanners,
     // actions
     setStudent,
     setTeacher,

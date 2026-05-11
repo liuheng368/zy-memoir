@@ -3,7 +3,7 @@
 /**
  * cloudfunctions/addBanner/index.js
  *
- * plan API-19：管理员上传合影。
+ * plan API-19 / Q-PLAN-22 / spec Q22：主页合影上传（v0.6 老师 + 管理员共用）。
  * 入参：{ token, fileID, url?, caption? }
  *   - 前端先 useImageCompress + useUpload 拿到 fileID 后再调本函数；
  *   - 云函数侧不再做体积校验，仅做角色与字段校验。
@@ -11,7 +11,11 @@
  *   成功 → { ok: true, code: 'BANNER_OK', data: { banner: {...} } }
  *   失败 → { ok: false, code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'INVALID_INPUT' | 'WRITE_ERROR' | 'SERVER_MISCONFIG' }
  *
- * 鉴权：与 adminCheck 共用 ADMIN_HMAC_KEY；token payload.role === 'admin'。
+ * 鉴权（v0.6 双 HMAC key 验签）：
+ *   1. 优先 ADMIN_HMAC_KEY → payload.role === 'admin' 放行；
+ *   2. 失败再 AUTH_HMAC_KEY → payload.role === 'teacher' 放行；
+ *   3. 其他一律 UNAUTHORIZED / FORBIDDEN；
+ *   4. uploadedBy 字段写实际操作角色：'admin' / 'teacher:<teacherId>'，仅追溯不参与判定。
  */
 
 const tcb = require('@cloudbase/node-sdk');
@@ -46,16 +50,35 @@ function fail(code, message = '') { return { ok: false, code, message }; }
 const MAX_CAPTION = 60;
 
 exports.main = async (event = {}) => {
-  const secret = process.env.ADMIN_HMAC_KEY;
-  if (!secret) return fail('SERVER_MISCONFIG', 'ADMIN_HMAC_KEY 未配置');
-  const payload = verifyToken(event.token, secret);
-  if (!payload) return fail('UNAUTHORIZED', '管理员登录态失效，请重新登录');
-  if (payload.role !== 'admin') return fail('FORBIDDEN', '需要管理员身份');
+  // v0.6 双 HMAC key 验签：先 ADMIN_HMAC_KEY → admin；失败再 AUTH_HMAC_KEY → teacher
+  const adminKey = process.env.ADMIN_HMAC_KEY;
+  const authKey = process.env.AUTH_HMAC_KEY;
+  if (!adminKey && !authKey) return fail('SERVER_MISCONFIG', 'ADMIN_HMAC_KEY / AUTH_HMAC_KEY 均未配置');
+
+  let payload = null;
+  let viaRole = null; // 'admin' | 'teacher'
+  if (adminKey) {
+    const p = verifyToken(event.token, adminKey);
+    if (p && p.role === 'admin') { payload = p; viaRole = 'admin'; }
+  }
+  if (!payload && authKey) {
+    const p = verifyToken(event.token, authKey);
+    if (p && p.role === 'teacher') { payload = p; viaRole = 'teacher'; }
+  }
+  if (!payload) return fail('UNAUTHORIZED', '登录态失效，请重新登录');
+  if (viaRole !== 'admin' && viaRole !== 'teacher') return fail('FORBIDDEN', '需要管理员或老师身份');
 
   const { fileID } = event;
   if (typeof fileID !== 'string' || !fileID.trim()) return fail('INVALID_INPUT', '缺少 fileID');
   const caption = typeof event.caption === 'string' ? event.caption.trim().slice(0, MAX_CAPTION) : '';
   const url = typeof event.url === 'string' ? event.url : '';
+
+  // uploadedBy：管理员 'admin'；老师 'teacher:<teacherId>'（teacherId 缺失时退化为 'teacher'）
+  const uploadedBy = viaRole === 'admin'
+    ? 'admin'
+    : (payload.teacherId !== undefined && payload.teacherId !== null
+        ? 'teacher:' + payload.teacherId
+        : 'teacher');
 
   try {
     const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV });
@@ -66,7 +89,7 @@ exports.main = async (event = {}) => {
       url,
       caption,
       createdAt: now,
-      uploadedBy: 'admin',
+      uploadedBy,
       updatedAt: now
     };
     const r = await db.collection('banners').add(doc);

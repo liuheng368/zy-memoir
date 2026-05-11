@@ -189,11 +189,11 @@ onBeforeUnmount(() => {
       </button>
 
       <button
-        v-if="auth.role === 'admin'"
+        v-if="auth.canManageBanners"
         type="button"
         class="icon-btn admin-btn"
-        title="管理后台"
-        aria-label="进入管理后台"
+        title="主页合影管理"
+        aria-label="进入主页合影管理"
         @click="gotoAdmin"
       >
         ⚙

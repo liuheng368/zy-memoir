@@ -1,12 +1,13 @@
 <script setup lang="ts">
 /**
- * 路由 `/admin?token=...` 管理员页（plan G9 / Q-PLAN-18）
+ * 路由 `/admin` 主页合影管理页（plan G9 / Q-PLAN-18 / Q-PLAN-22）
  *
- * 视图职责（合并 G2 + G9）：
- * - 路由守卫（src/router/index.ts）已拦掉 guest / 缺 token；
- * - 本视图 onMounted 调云函数 `adminCheck` 验 HMAC token；
- * - 通过 → setAdmin；失败 → 显示错误并提供「返回主页」入口；
- * - 通过后展示主页合影网格 + 上传（caption + 压缩 + 进度）+ 删除（二次确认）。
+ * v0.6 双角色入口（PRD v0.4 / spec v0.6）：
+ * - **管理员**：`/admin?token=<HMAC>` → onMounted 调 `adminCheck` 校验 token → setAdmin；
+ * - **老师**：从 `/teacher` 登录后已持 `AUTH_HMAC_KEY` token → 跳过 `adminCheck`，直接 fetchBanners；
+ * - 路由守卫（src/router/index.ts）已拦掉 guest / 学生 / 无 token / 无 canManageBanners 三类；
+ * - 通过 → 展示主页合影网格 + 上传（caption + 压缩 + 进度）+ 删除（二次确认）；
+ * - 老师 / 管理员**操作权限完全等同**：可删除任意合影（含他人上传）。
  *
  * 数据来源：useClassDataStore.banners（与 Home.vue 共享同一份引用，
  * 上传 / 删除直接 mutate `banners.data`，主页轮播自动刷新）。
@@ -14,7 +15,7 @@
  * 写入路径（plan API-19）：
  *   1. useImageCompress.compress(file) → ≤ 3 MB
  *   2. useUpload.upload({ cloudPath: `banners/<yyyy-MM>/<uuid>.<ext>` })
- *   3. addBanner({ token, fileID, url, caption })  → 服务端写库
+ *   3. addBanner({ token, fileID, url, caption })  → 云函数双 HMAC key 验签 + 写库
  *   4. unshift 到 banners.data 头部（与云端 orderBy createdAt desc 一致）
  *
  * 删除路径：ConfirmDialog → removeBanner({ token, bannerId })
@@ -74,12 +75,14 @@ async function verifyAdmin(token: string) {
 }
 
 onMounted(async () => {
-  // 1) 已是 admin → 跳过 verify；2) 否则用 query 上的 token 校验
-  if (!(auth.role === 'admin' && auth.token) && tokenInQuery.value) {
+  // v0.6 双角色入口：
+  // 1) 老师 / 管理员已持 token（canManageBanners=true）→ 直接拉数据，跳过 adminCheck；
+  // 2) 否则若 query 带 ?token= → 走 adminCheck 把游客 / 未初始化升级为 admin；
+  // 3) 校验通过后拉合影。
+  if (!auth.canManageBanners && tokenInQuery.value) {
     await verifyAdmin(tokenInQuery.value)
   }
-  // 校验通过（或 store 已 admin）→ 拉取合影
-  if (auth.role === 'admin' && auth.token) {
+  if (auth.canManageBanners) {
     await classData.fetchBanners()
   }
 })
@@ -119,7 +122,7 @@ async function onFilePicked(e: Event) {
   input.value = ''
   if (!file) return
   if (!auth.token) {
-    toast.error('管理员 token 缺失，请刷新页面')
+    toast.error('登录态缺失，请刷新页面')
     return
   }
   if (!/^image\//.test(file.type)) {
@@ -133,7 +136,7 @@ async function onFilePicked(e: Event) {
 
 async function doUploadBanner(file: File, caption: string) {
   if (!auth.token) {
-    toast.error('管理员 token 缺失，请刷新页面')
+    toast.error('登录态缺失，请刷新页面')
     return
   }
   submitting.value = true
@@ -232,11 +235,11 @@ function onConfirmCancel() {
   <main class="admin">
     <header class="topbar">
       <button class="back" @click="backHome">← 返回主页</button>
-      <h1>管理员</h1>
+      <h1>主页合影管理</h1>
     </header>
 
     <section v-if="checking" class="placeholder">
-      <p>正在校验管理员 token…</p>
+      <p>正在校验登录态…</p>
     </section>
 
     <section v-else-if="checkError" class="placeholder error-box">
@@ -245,7 +248,7 @@ function onConfirmCancel() {
       <button class="primary" @click="backHome">返回主页</button>
     </section>
 
-    <template v-else-if="auth.role === 'admin'">
+    <template v-else-if="auth.canManageBanners">
       <!-- 上传区 -->
       <section class="card upload-card">
         <h2>主页合影管理</h2>
