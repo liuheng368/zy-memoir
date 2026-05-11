@@ -332,12 +332,16 @@ onBeforeUnmount(() => {
 .cropper-mask {
   position: fixed;
   inset: 0;
+  /* iOS safe-area 兜底（详见 main.css 注释） */
+  min-height: 100vh;
+  min-height: 100dvh;
   z-index: 8500;
   background: rgba(20, 20, 20, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  /* 用 max() 把 safe-area 纳入 padding，避免裁剪卡片被刘海或 home indicator 遮挡 */
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
 }
 .cropper-card {
   width: 100%;

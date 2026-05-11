@@ -76,17 +76,22 @@ onBeforeUnmount(() => {
 .lightbox-mask {
   position: fixed;
   inset: 0;
+  /* iOS safe-area 兜底（详见 main.css 注释） */
+  min-height: 100vh;
+  min-height: 100dvh;
   z-index: 9000;
   background: rgba(10, 10, 10, 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px;
+  /* 用 max() 把 safe-area 纳入 padding，确保关闭按钮和图片不被刘海/home indicator 遮挡 */
+  padding: max(32px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
 }
 .lightbox-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  /* iOS 上 close 按钮需要避开刘海 */
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
   width: 36px;
   height: 36px;
   border-radius: 50%;

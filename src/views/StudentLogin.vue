@@ -129,12 +129,16 @@ async function handleSubmit() {
 .overlay-mask {
   position: fixed;
   inset: 0;
+  /* iOS safe-area 兜底（详见 main.css 注释） */
+  min-height: 100vh;
+  min-height: 100dvh;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 16px;
+  /* iOS 上 padding 用 max() 包裹安全区，避免卡片被刘海或 home indicator 遮挡 */
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
 }
 
 .overlay-card {

@@ -108,12 +108,16 @@ onBeforeUnmount(() => {
 .confirm-mask {
   position: fixed;
   inset: 0;
+  /* iOS safe-area 兜底（详见 main.css 注释） */
+  min-height: 100vh;
+  min-height: 100dvh;
   z-index: 9000;
   background: rgba(20, 20, 20, 0.42);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  /* 用 max() 把 safe-area 纳入 padding，避免确认弹窗被刘海或 home indicator 遮挡 */
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
 }
 .confirm-card {
   width: 100%;

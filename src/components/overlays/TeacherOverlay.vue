@@ -592,6 +592,9 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
 .overlay-mask {
   position: fixed;
   inset: 0;
+  /* iOS Safari safe-area 兜底，详见 main.css 注释 */
+  min-height: 100vh;
+  min-height: 100dvh;
   z-index: 8000;
   background: rgba(20, 20, 20, 0.42);
   display: flex;
@@ -602,7 +605,7 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
   position: relative;
   width: 100%;
   max-width: 480px;
-  max-height: 92vh;
+  max-height: calc(92dvh - env(safe-area-inset-bottom));
   background: var(--color-card);
   border-top-left-radius: 18px;
   border-top-right-radius: 18px;
@@ -610,6 +613,7 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.15);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 @media (min-width: 768px) {
   .overlay-mask {
@@ -618,6 +622,7 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
   .overlay-sheet {
     border-radius: 16px;
     max-height: 86vh;
+    padding-bottom: 0;
   }
 }
 

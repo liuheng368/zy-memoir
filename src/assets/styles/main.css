@@ -36,7 +36,13 @@ body,
   margin: 0;
   padding: 0;
   width: 100%;
+  /* iOS Safari 上 100vh 不含 safe-area（home indicator 区域），导致 body 背景
+     无法渗到底部 safe area；半透明遮罩叠加时 safe area 看起来颜色更浅，
+     视觉上像「遮罩没盖住安全区」。100dvh 是动态视口高度（含 safe area），
+     可让 body 的 --color-bg 一直铺到屏幕物理底部，遮罩叠加颜色就一致了。
+     旧浏览器（Safari 15.3-、安卓 Chrome 107-）退回 100vh，无回归。 */
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 html {

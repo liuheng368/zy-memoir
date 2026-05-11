@@ -815,6 +815,10 @@ function recBlobKb(): string {
 .overlay-mask {
   position: fixed;
   inset: 0;
+  /* iOS Safari：100vh 不含 safe-area，min-height: 100dvh 兜底，
+     让半透明遮罩在动态视口高度（含 home indicator 区）下也铺满。 */
+  min-height: 100vh;
+  min-height: 100dvh;
   z-index: 8000;
   background: rgba(20, 20, 20, 0.42);
   display: flex;
@@ -826,7 +830,9 @@ function recBlobKb(): string {
   position: relative;
   width: 100%;
   max-width: 480px;
-  max-height: 92vh;
+  /* sheet 贴底，需把高度从 100dvh 中扣掉 home indicator 安全区，
+     避免按钮 / 录音 inline 面板被横条遮挡。 */
+  max-height: calc(92dvh - env(safe-area-inset-bottom));
   background: var(--color-card);
   border-top-left-radius: 18px;
   border-top-right-radius: 18px;
@@ -834,6 +840,8 @@ function recBlobKb(): string {
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.15);
+  /* iOS 上让 sheet 内部最后一行内容自然避开 home indicator */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @media (min-width: 768px) {
@@ -844,6 +852,8 @@ function recBlobKb(): string {
   .overlay-sheet {
     border-radius: 16px;
     max-height: 86vh;
+    /* PC 上居中显示，没有贴底诉求，关掉 safe-area padding 避免下沿空白 */
+    padding-bottom: 0;
   }
 }
 
