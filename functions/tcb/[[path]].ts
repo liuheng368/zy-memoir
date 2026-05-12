@@ -91,8 +91,8 @@ export async function onRequest(context: OnRequestContext): Promise<Response> {
     return new Response(null, { status: 204, headers: corsHeaders() })
   }
 
-  // 解析目标路径：catchall 参数名 = 文件名 [[default]] 中的 default
-  const raw = params?.default
+  // 解析目标路径：catchall 参数名 = 文件名 [[path]] 中的 path
+  const raw = params?.path
   const tail = Array.isArray(raw) ? raw.join('/') : (raw ?? '')
   const incomingUrl = new URL(request.url)
 
