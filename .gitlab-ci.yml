@@ -1,0 +1,44 @@
+stages:
+  - validate
+  - deploy
+
+variables:
+  EDGEONE_PROJECT_NAME: "zy-memoir"
+  PNPM_STORE_PATH: ".pnpm-store"
+
+cache:
+  key:
+    files:
+      - pnpm-lock.yaml
+  paths:
+    - .pnpm-store/
+
+default:
+  image: node:22.11.0
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@9.12.2 --activate
+    - pnpm config set store-dir $PNPM_STORE_PATH
+    - pnpm install --frozen-lockfile
+
+validate:
+  stage: validate
+  script:
+    - pnpm build
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+deploy-preview:
+  stage: deploy
+  script:
+    - npx edgeone pages deploy -n $EDGEONE_PROJECT_NAME -t $EDGEONE_API_TOKEN -e preview
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+deploy-production:
+  stage: deploy
+  script:
+    - npx edgeone pages deploy -n $EDGEONE_PROJECT_NAME -t $EDGEONE_API_TOKEN -e production
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
