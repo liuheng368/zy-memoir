@@ -4,9 +4,7 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vite.dev/config/
 //
-// `base` 路径策略：统一 `/`（适用于本地 dev / preview、CloudBase 静态托管 /
-// EdgeOne Pages / Cloudflare Pages 等根路径部署场景）。
-// 历史上的 `GH_PAGES=1 → '/zy-memoir/'` 子路径前缀已随 GitHub Pages 链路下线一并移除。
+// `base` 路径策略：统一 `/`，当前正式前端入口由 EdgeOne Pages 承载。
 export default defineConfig({
   base: '/',
   plugins: [vue()],

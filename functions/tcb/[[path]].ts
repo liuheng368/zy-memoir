@@ -3,7 +3,7 @@
  *
  * 触发路径：所有 /tcb/* 请求都进这个 Function
  *
- * 背景（plan.md「方案 K」）：
+ * 背景：
  *   - CloudBase 免费版禁止通过 envDomainManagement.create 添加自定义 Web 安全域名
  *     （CreateAuthDomain → 「当前套餐无法执行此操作」）
  *   - 因此 EdgeOne Pages 默认域 `*.edgeone.cool` 直接调用

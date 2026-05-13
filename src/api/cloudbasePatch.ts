@@ -1,11 +1,11 @@
 /**
  * CloudBase API endpoint 同源化补丁
  *
- * 背景（plan.md「方案 K」）：
+ * 背景：
  *   - @cloudbase/js-sdk v2.x 不支持自定义 endpoint，所有请求硬编码到
  *     `https://${envId}.${region}.tcb-api.tencentcloudapi.com`；
  *   - CloudBase 免费版禁止加白第三方域名 → 浏览器 CORS 拦截；
- *   - EdgeOne Pages 默认域 `*.edgeone.cool` 上由 Edge Function（functions/tcb/[[default]].ts）
+ *   - EdgeOne Pages 上由 Edge Function（functions/tcb/[[path]].ts）
  *     反代到 CloudBase 网关并补 CORS 头。
  *
  * 本模块的工作：在 SDK 真正发起任何请求**之前**，把
@@ -17,7 +17,7 @@
  *
  * 灰度开关：
  *   - 仅当 `import.meta.env.VITE_TCB_PROXY === 'edgeone'` 时启用
- *   - 默认（本地 dev / GH Pages / CloudBase 静态托管）走原始 endpoint
+ *   - 默认（本地 dev / 回退场景）走原始 endpoint
  */
 
 const TARGET_HOST_FRAGMENT = 'tcb-api.tencentcloudapi.com'

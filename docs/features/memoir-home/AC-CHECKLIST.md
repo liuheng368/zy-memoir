@@ -23,7 +23,7 @@
 | --- | --- | --- | --- |
 | 0.1 | CloudBase env 注入 | `.env.production.VITE_TCB_ENV_ID == cloudbaserc.json::envId == zy-memoir-d5gaxbvyxe80564f4` | [x] |
 | 0.2 | 云函数全量部署 | `pnpm deploy:fn`（21 个云函数；学生 / 老师 HMAC + admin HMAC 两套独立） | [ ] |
-| 0.3 | 静态站部署 | `pnpm deploy:static` 后获得托管域名（`https://<envId>.tcloudbaseapp.com/`） | [ ] |
+| 0.3 | 前端部署 | `main` 分支触发 EdgeOne Pages production 部署成功 | [ ] |
 | 0.4 | seed 名单写入 | 控制台 / mcp 触发 `seedStudents` + `seedTeachers`（一次性） | [x] |
 | 0.5 | 管理员 token 签发 | `pnpm sign:admin --days 30`（自动从 CloudBase 拉 ADMIN_HMAC_KEY 后签发；CI 离线场景用 `ADMIN_HMAC_KEY=xxx pnpm sign:admin:env --days 7`） | [x] |
 

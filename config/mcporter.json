@@ -3,7 +3,7 @@
     "cloudbase": {
       "command": "npx",
       "args": ["@cloudbase/cloudbase-mcp@latest"],
-      "description": "Tencent CloudBase MCP — 通过 device-code 登录后管理云开发资源（环境 / 函数 / 数据库 / 静态托管 / 存储）",
+      "description": "Tencent CloudBase MCP — 通过 device-code 登录后管理云开发后端资源（环境 / 函数 / 数据库 / 存储）",
       "lifecycle": "keep-alive"
     }
   }

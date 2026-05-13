@@ -410,7 +410,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                    Vue 3 SPA (静态托管)                        │
+│                    Vue 3 SPA (EdgeOne Pages)                   │
 │  ┌────────────┐  ┌────────────┐  ┌────────────┐              │
 │  │  Views     │  │ Components │  │ Composables│              │
 │  │ Login/Home │  │ Overlays   │  │ useUpload  │              │
@@ -459,7 +459,7 @@
 | **工具 & 常量** | `src/utils/validators.ts`、`src/utils/constants.ts`、`src/utils/cosFile.ts` | 校验、常量（上限值等）、COS fileID 处理 |
 | **静态资源** | `src/assets/data/kindergarten_students_en_keys.json`、`src/assets/img/default-avatar/`、`src/assets/img/banner-empty.png` | 名单 + 占位资源 |
 | **后端 / 云函数** | `cloudfunctions/studentLogin/`、`teacherLogin/`、`adminCheck/`、`seedStudents/`、`addStudentPhoto/`、`addStudentRecording/`、`addBanner/` | 鉴权 + 兜底校验 |
-| **CloudBase 配置** | `cloudbaserc.json`（✅ 已建，含 `envId=zy-memoir-d5gaxbvyxe80564f4`）、`.env`（待 G1 一起建，注入 `VITE_TCB_ENV_ID`） | 部署 / SDK 初始化 |
+| **CloudBase 配置** | `cloudbaserc.json`（✅ 已建，含 `envId=zy-memoir-d5gaxbvyxe80564f4`）、`.env`（注入 `VITE_TCB_ENV_ID`） | 云函数 / SDK 初始化 |
 | **MCP 配置** | `config/mcporter.json`（✅ 已建） | agent 通过 `npx mcporter call cloudbase.*` 操作云资源 |
 
 ### 技术选型 / 约束
@@ -468,7 +468,7 @@
 | ---- | ---- | ---- |
 | **框架** | **Vue 3 + `<script setup>` + TypeScript** | 默认推荐；Vue 2 仅在严格生态约束下考虑（**Q-PLAN-1**） |
 | **构建** | **Vite 5** | 与 Vue 3 默认搭配 |
-| **路由** | **vue-router 4** | history 模式；CloudBase 静态托管支持回退（**Q-PLAN-4**） |
+| **路由** | **vue-router 4** | history 模式；由 EdgeOne Pages 承载前端入口（**Q-PLAN-4**） |
 | **状态管理** | **Pinia** | 官方推荐，TS 友好（**Q-PLAN-2**） |
 | **UI 库** | **自起 + 少量 Naive UI 组件**（Toast / Dialog） | 36 头像墙的"非常规布局"自写 SVG/CSS（**Q-PLAN-3**） |
 | **轮播** | 自写 + CSS scroll-snap，或 `swiper-vue` | 自写优先节流体积（**Q-PLAN-3**） |
@@ -478,7 +478,7 @@
 | **音频播放** | 原生 `<audio>` + `useAudioPlayer` 单例（保证全局**只播一条**） | 不引第三方 |
 | **后端 SDK** | **`@cloudbase/js-sdk`**（含 db / functions / storage） | 单例初始化 |
 | **鉴权** | CloudBase **匿名登录** + 自定义云函数发放短期 token | **Q-PLAN-8** |
-| **部署** | CloudBase **静态网站托管** + 函数 + COS 一站式 | 备选 Vercel + CloudBase |
+| **部署** | **EdgeOne Pages** 承载前端；CloudBase 承载云函数 / DB / COS | GitLab CI 触发 EdgeOne Pages 发布 |
 | **存储计费** | **优先消耗免费包 → 满后切付费包**（详见「### 存储 / COS 资源包消耗策略」） | 包 ID 与切换条件硬约束 |
 | **包管理** | **pnpm** | monorepo-friendly |
 | **代码风格** | ESLint + Prettier + Vue 官方 style guide |  |
@@ -542,7 +542,7 @@
 | `tsconfig.json` `tsconfig.node.json` | 新增 | ⬜ |  |
 | `index.html` | 新增 | ⬜ | `<meta name="robots" content="noindex,nofollow">` |
 | `.env` `.env.production` | 新增 | ⬜ | `VITE_TCB_ENV_ID=zy-memoir-d5gaxbvyxe80564f4`（G1 vite 工程起来后落） |
-| `cloudbaserc.json` | 新增 | ✅ | CloudBase 部署配置（含 envId、4 个云函数描述） |
+| `cloudbaserc.json` | 新增 | ✅ | CloudBase 后端部署配置（含 envId、云函数描述） |
 | `config/mcporter.json` | 新增 | ✅ | CloudBase MCP（device-code 登录，无凭证入仓） |
 | `.gitignore` | 新增 | ✅ | 屏蔽 `node_modules` / `.env*.local` / `.cloudbase/` / `dist/` 等 |
 | `src/main.ts` | 新增 | ⬜ | 创建 Pinia / Router / 挂载根组件 |
@@ -693,7 +693,7 @@ interface UploadTask {
 
 #### Q-PLAN-4：路由模式
 
-- [x] **history 模式** + CloudBase 静态托管 fallback（推荐，URL 干净） ⚠️
+- [x] **history 模式** + EdgeOne Pages 前端入口（URL 干净） ⚠️
 - [ ] hash 模式（最省事，URL 带 `#`） ⚠️
 
 #### Q-PLAN-5：MP3 编码方式
@@ -741,9 +741,7 @@ interface UploadTask {
 
 #### Q-PLAN-11：部署
 
-- [x] **CloudBase 静态网站托管** + **CloudBase 函数 / COS**（一站式，国内访问稳定） ⚠️
-- [ ] Vercel / Netlify 静态托管 + CloudBase 后端（CDN 更广但跨境慢） ⚠️
-- [ ] GitHub Pages 静态 + CloudBase 后端（成本最低） ⚠️
+- [x] **EdgeOne Pages 前端** + **CloudBase 函数 / DB / COS 后端**（当前正式方案） ⚠️
 
 #### Q-PLAN-12：教师录音上限（与 spec **Q-TEACHER-MAX** 联动）
 
@@ -1051,7 +1049,7 @@ interface UploadTask {
   - [ ] 单测覆盖：游客构造请求 → 必须被拒绝
   - [x] **v0.6 调整**：`addBanner` / `removeBanner` 改造为**双 HMAC key 验签**（先 `ADMIN_HMAC_KEY` → admin 放行；失败再 `AUTH_HMAC_KEY` → teacher 放行；其它一律 401/403），白名单从 `['admin']` 扩为 `['admin','teacher']`，落表 `uploadedBy` 区分追溯。详见 **Q-PLAN-22**
 - [ ] **G12 部署与运维**
-  - [ ] CloudBase 静态托管发布脚本
+  - [ ] EdgeOne Pages 发布配置
   - [ ] 云函数发布脚本
   - [ ] `scripts/seed-students.mjs`
   - [ ] `scripts/backup.mjs`（月度备份 db + COS；**顺带打印 P0 包 `free-free-std_storage-1777532470-0` 剩余容量 + 剩余有效天数（到 2026-10-31）**，用于消耗策略巡检；剩余天数 ≤ 30 时高亮提醒"准备续 P0 或滚 P1"）
@@ -1112,7 +1110,7 @@ interface UploadTask {
 
 ### 组 7：部署与验收（依赖：组 6）
 
-- [x] G12 CloudBase 部署脚本（**✅** `scripts/deploy.mjs` 不强引入 `@cloudbase/cli` 依赖，校验 `.env.production.VITE_TCB_ENV_ID` 与 `cloudbaserc.json::envId` 一致 + 打印 `npx -y @cloudbase/cli login` / `framework deploy -e <envId> --only client|functions` 命令清单；`--only all|static|fn` + `--skip-build` 选项；`package.json` 增 `deploy` / `deploy:fn` / `deploy:static` 三 script）
+- [x] G12 CloudBase 云函数部署脚本（`scripts/deploy.mjs` 不强引入 `@cloudbase/cli` 依赖，校验 `.env.production.VITE_TCB_ENV_ID` 与 `cloudbaserc.json::envId` 一致 + 打印 `npx -y @cloudbase/cli login` / `framework deploy -e <envId> --only functions` 命令清单；`package.json` 保留 `deploy` / `deploy:fn`）
 - [x] G12 月度备份脚本（**✅** `scripts/backup.mjs` 引导式：列出 `tcb db:export` + COS bucket 备份命令清单；核心是计算 P0 包 `free-free-std_storage-1777532470-0` 距 2026-10-31 剩余天数，≤ 30 天 `process.exit(2)` 高亮提醒切 P1；写 `backups/<yyyy-MM>/manifest.json`，`.gitignore` 已加 `backups/`；`package.json` 增 `backup` / `sign:admin` script）
 - [x] G14 游客态后端兜底（云函数侧 401）（**✅** 实际是 G2 / G4 / G9 写云函数时同步落实：11 个写函数 `updateStudentIntro` / `addStudentPhoto` / `removeStudentPhoto` / `updateStudentAvatar` / `addStudentRecording` / `removeStudentRecording` / `updateTeacherAvatar` / `addTeacherRecording` / `removeTeacherRecording` / `addBanner` / `removeBanner` 均接 `_shared/hmac.verifyToken` + `role` 白名单；游客无 token 必被拒；本组仅 plan 收尾勾选）
 - [x] G13 跑通 AC-1 ~ AC-17（**✅** 起草 [`AC-CHECKLIST.md`](./AC-CHECKLIST.md) 作为执行手册：A 类 18 条 AC + 鉴权 / B 类视觉与弱网 / C 类真机回归三段；自检自动通过项已 ✅，真人复跑由黑贤 / 园方负责人执行后回填）
@@ -1278,115 +1276,38 @@ interface UploadTask {
 
 ---
 
-## 部署方案 K：EdgeOne Pages + Edge Function 反代（CORS 绕行 / 零成本）
+## 当前部署方案：EdgeOne Pages + CloudBase 后端
 
-### 背景与约束
+### 目标架构
 
-CloudBase 默认静态托管域名 `*.tcloudbaseapp.com` 在国内首次访问时会触发**腾讯云风险拦截页**（家长端体验差），但免费版**禁止**通过 [`cloudbase.envDomainManagement`](.agents/skills/cloudbase/SKILL.md) 添加自定义 Web 安全域名（CORS 白名单）—— `CreateAuthDomain` 直接返回「当前套餐无法执行此操作」。
-
-排查矩阵后唯一同时满足「¥0 / 云函数可用 / 无风险页 / 无需备案域名」四条硬约束的方案为 **K**：把前端部署到 EdgeOne Pages（自带 `*.pages.edgeone.app` 免备案默认域），把云函数请求经 EdgeOne Edge Function 反代到 CloudBase API 域名（绕开浏览器 CORS）。
-
-| 方案 | 成本 | 云函数 | 风险页 | 需自定义域名 | 命中 |
-| --- | --- | --- | --- | --- | --- |
-| F 升级 CloudBase 基础版 + 加白 GH Pages | ¥108/年 | ✅ | ✅ | ❌ | 出 |
-| H 备案域名 CNAME 到 CloudBase 静态托管 | ¥0 | ✅ | ✅ | **要** | 出 |
-| I 保留 tcloudbaseapp.com + 话术引导 | ¥0 | ✅ | ❌（有页） | ❌ | 出 |
-| J EdgeOne Pages 纯部署（无反代） | ¥0 | ❌（CORS 死） | ✅ | ❌ | 出 |
-| **K EdgeOne Pages + Edge Function 反代** | **¥0** | **✅** | **✅** | **❌** | **唯一通** |
-
-### 执行清单（一次到位）
-
-#### 1. EdgeOne Pages 接入（用户操作，10 分钟）
-
-- 入口：[https://console.cloud.tencent.com/edgeone/pages](https://console.cloud.tencent.com/edgeone/pages)
-- 「创建项目」→「Git 仓库导入」→ 选 `liuheng368/zy-memoir`
-- 框架预设：**Vite**
-- 构建命令：`pnpm build`（v0.6 起 GitHub Pages 链路已下线，`build:gh` script + `GH_PAGES` 三元已从仓库清理；统一根路径部署）
-- 输出目录：`dist`
-- 监听分支：`main`
-- 部署成功后会分配一个免备案的 `xxx.pages.edgeone.app` 域名，国内直连，无风险页
-
-#### 2. 加 Edge Function 反代云函数（Agent 操作）
-
-新建 [`functions/tcb/[[default]].ts`](functions/tcb/[[default]].ts)（EdgeOne Pages 约定路径）：
-
-- 把 `/tcb/*` 的请求透传到 `https://${envId}.ap-shanghai.tcb-api.tencentcloudapi.com/*`
-- 补 `Access-Control-Allow-Origin: *` 等 CORS 头
-- 保留 method / body / headers / query string 完整透传
-
-#### 3. 改 [`src/api/cloudbase.ts`](src/api/cloudbase.ts)（Agent 操作）
-
-[`@cloudbase/js-sdk`](src/api/cloudbase.ts:1) 不支持改 endpoint，所以**在 SDK 加载前 monkey-patch `fetch` 与 `XMLHttpRequest`**：把所有 `*.tcb-api.tencentcloudapi.com` 的请求 URL 重写到当前域名 `/tcb/*`，让 EdgeOne Edge Function 接管。这是业界绕 CloudBase SDK 限制的标准做法。
-
-#### 4. 调整 [`vite.config.ts`](vite.config.ts)（Agent 操作）
-
-EdgeOne Pages 部署 base 为 `/`，[`vite.config.ts`](vite.config.ts) 已固定 `base: '/'`（v0.6 移除 `GH_PAGES` 三元）。
-
-#### 5. 配 EdgeOne Pages 项目环境变量（用户操作）
-
-在 EdgeOne Pages 控制台「环境变量」加一条：
-
-- `VITE_TCB_ENV_ID = zy-memoir-d5gaxbvyxe80564f4`
-
-### 角色分工
-
-| 步骤 | 执行方 | 预计耗时 |
+| 层 | 平台 | 说明 |
 | --- | --- | --- |
-| 1. 接入 EdgeOne Pages 控制台、绑 GitHub | 用户 | 10 分钟 |
-| 5. 配 Pages 项目环境变量 | 用户 | 1 分钟 |
-| 2. Edge Function 反代代码 | Agent | 30 分钟 |
-| 3. SDK fetch/XHR monkey-patch | Agent | 30 分钟 |
-| 4. `vite.config.ts` 校验 | Agent | 5 分钟 |
-| 联调验证 | 双方 | 15 分钟 |
+| 前端 | EdgeOne Pages | Vue / Vite 构建产物由 EdgeOne Pages 承载 |
+| 边缘代理 | EdgeOne Pages Functions | [`functions/tcb/[[path]].ts`](functions/tcb/[[path]].ts) 代理 `/tcb/*` 到 CloudBase API |
+| 后端 | CloudBase | 云函数、文档数据库、云存储 |
+| 自动部署 | GitLab CI | [`.gitlab-ci.yml`](.gitlab-ci.yml) 推送 `main` 后部署 production，MR 部署 preview |
 
-### 验收 AC
+### 关键配置
+
+| 文件 | 说明 |
+| --- | --- |
+| [`edgeone.json`](edgeone.json) | EdgeOne Pages 构建命令、输出目录、Node.js 版本 |
+| [`.env.production`](.env.production) | `VITE_TCB_ENV_ID` 与 `VITE_TCB_PROXY=edgeone` |
+| [`src/api/cloudbasePatch.ts`](src/api/cloudbasePatch.ts) | 在 SDK 初始化前把 CloudBase API 请求改写到同源 `/tcb/*` |
+| [`cloudbaserc.json`](cloudbaserc.json) | 仅保留 CloudBase 云函数部署配置 |
+
+### 控制台待办
+
+- [ ] GitLab CI/CD Variables 配置 `EDGEONE_API_TOKEN`
+- [ ] EdgeOne Pages 项目配置 `TCB_ENV_ID=zy-memoir-d5gaxbvyxe80564f4`
+- [ ] EdgeOne Pages 项目配置 `TCB_REGION=ap-shanghai`
+- [ ] `hrenycloud.net.cn` 备案完成后，绑定正式域名与访问路径
+
+### 验收
 
 | AC | 描述 | 验证 |
 | --- | --- | --- |
-| AC-K-1 | 访问 `xxx.pages.edgeone.app` 首屏 200，无风险拦截页 | 真机 / 浏览器 |
-| AC-K-2 | 浏览器 Network 面板看到云函数请求走 `/tcb/*`，状态 200，无 CORS 报错 | DevTools |
-| AC-K-3 | 学生登录 / 老师登录 / 录音上传 / Banner 加载等 11 个云函数全部可正常调用 | 真机 |
-| AC-K-4 | ~~关闭 GH Pages workflow 触发器~~（v0.6 已直接删除 [`.github/workflows/deploy-pages.yml`](https://github.com/liuheng368/2-memoir) + `build:gh` script + `GH_PAGES` 三元，链路完全下线） | git log |
-
-### 实施计划
-
-#### 组 K1：Edge Function 反代（Agent）
-
-- [ ] 新建 [`functions/tcb/[[default]].ts`](functions/tcb/[[default]].ts)：透传 method/body/headers/query 到 `https://${VITE_TCB_ENV_ID}.ap-shanghai.tcb-api.tencentcloudapi.com/*`
-- [ ] 反代响应附加 CORS 头：`Access-Control-Allow-Origin: *` / `Access-Control-Allow-Headers: *` / `Access-Control-Allow-Methods: *`
-- [ ] 处理 OPTIONS 预检请求
-
-#### 组 K2：前端 SDK 适配（Agent）
-
-- [ ] 在 [`src/api/cloudbase.ts`](src/api/cloudbase.ts) 中，先于 `cloudbase.init()` 注入 `window.fetch` 与 `XMLHttpRequest.prototype.open` 拦截器，把 `tcb-api.tencentcloudapi.com` 请求改写到同源 `/tcb/*`
-- [ ] 上线灰度开关：`VITE_TCB_PROXY=edgeone` 启用 patch，缺省/`origin` 走原始 SDK，便于本地开发与回退
-- [ ] 单元测试 `ensureAnonAuth` / `callFunction` 仍能跑通（用 mock fetch）
-
-#### 组 K3：用户控制台操作（用户）
-
-- [ ] EdgeOne Pages 创建项目并绑 GitHub
-- [ ] 配 `VITE_TCB_ENV_ID` 环境变量
-- [ ] 取得 `xxx.pages.edgeone.app` 默认域名并贴回会话
-
-#### 组 K4：联调与回归（双方）
-
-- [ ] 完成 AC-K-1 ~ AC-K-4 真机走查
-- [x] **v0.6**：直接删除 `.github/workflows/deploy-pages.yml` + `package.json::build:gh` + `vite.config.ts::GH_PAGES` 三元，GitHub Pages 链路完全下线（用户需手动到 GitHub `Settings → Pages` 解绑 Source、`Settings → Environments` 删除 `github-pages` environment 收尾）
-- [ ] 把家长端访问入口从 `liuheng368.github.io/zy-memoir/` 切换到 `xxx.pages.edgeone.app`，更新内部分享话术
-
-### 方案 K 澄清事项
-
-#### Q-K-1：是否也代理静态资源？
-
-- [ ] **方案 A**：仅代理 `/tcb/*`，静态资源仍由 EdgeOne Pages CDN 直出（默认） ✅ 推荐
-- [ ] **方案 B**：所有请求走 Edge Function（成本与冷启动开销更高，无收益）
-
-#### Q-K-2：fetch 拦截方式
-
-- [ ] **方案 A**：直接覆盖 `window.fetch` + `XMLHttpRequest.prototype.open`，URL 字符串替换（侵入小、兼容好）✅ 推荐
-- [ ] **方案 B**：用 Service Worker 拦截（PWA 化，复杂度高，对老 Safari 兼容差）
-
-#### Q-K-3：环境变量在 Edge Function 里如何读 envId
-
-- [ ] **方案 A**：硬编码 `zy-memoir-d5gaxbvyxe80564f4` 到 Edge Function 源码（仅一处，可读性强）✅ 推荐
-- [ ] **方案 B**：通过 EdgeOne Pages 控制台为 Function 配 `TCB_ENV_ID`，运行时读 `globalThis.TCB_ENV_ID`（多环境时再切换）
+| AC-DEPLOY-1 | `main` 分支提交触发 EdgeOne Pages production 部署 | GitLab Pipeline / EdgeOne Pages 部署记录 |
+| AC-DEPLOY-2 | 首屏 200，静态资源从 EdgeOne Pages 正常返回 | 浏览器 / 真机 |
+| AC-DEPLOY-3 | 云函数请求走 `/tcb/*`，无 CORS 报错 | DevTools Network |
+| AC-DEPLOY-4 | 学生登录、老师登录、合影加载、上传链路可用 | 真机回归 |

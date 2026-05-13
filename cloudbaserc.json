@@ -2,19 +2,11 @@
   "$schema": "https://framework-1258016615.tcloudbaseapp.com/schema/latest.json",
   "version": "2.0",
   "envId": "zy-memoir-d5gaxbvyxe80564f4",
-  "$comment": "钟园幼儿园 2024 届大二班 班级回忆录 · CloudBase 部署描述文件；envId 与 .env*.VITE_TCB_ENV_ID 必须保持一致",
+  "$comment": "钟园幼儿园 2024 届大二班 班级回忆录 · CloudBase 后端部署描述文件；envId 与 .env*.VITE_TCB_ENV_ID 必须保持一致",
   "$comment_storage": "COS 资源包消耗优先级：P0 free-free-std_storage-1777532470-0（50 GB · 全地域 · 2026-10-31 到期 · 免费，先用）→ P1 std_storage-20260430782142354409091-0（50 GB · 中国大陆 · 2027-04-30 到期 · 付费，兜底，手动续费）；切换条件：(a) P0 到期 2026-10-31 OR (b) P0 用量 ≥ 95%；详见 docs/features/memoir-home/plan.md → 「### 存储 / COS 资源包消耗策略」；前端 / 云函数 SDK 不应也无法在代码里指定包，由腾讯云控制台「资源包管理」统一控制扣减顺序",
   "framework": {
     "name": "zy-memoir",
     "plugins": {
-      "client": {
-        "use": "@cloudbase/framework-plugin-website",
-        "inputs": {
-          "outputPath": "dist",
-          "cloudPath": "/",
-          "buildCommand": "pnpm build"
-        }
-      },
       "functions": {
         "use": "@cloudbase/framework-plugin-function",
         "inputs": {
