@@ -198,13 +198,5 @@
         }
       }
     }
-  },
-  "app": {
-    "serviceName": "zy-memoir",
-    "framework": "vite",
-    "installCommand": "",
-    "buildCommand": "",
-    "outputDir": "./dist",
-    "deployPath": "/"
   }
 }
