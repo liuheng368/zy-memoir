@@ -2,8 +2,10 @@
  * CloudBase API endpoint 同源化补丁
  *
  * 背景：
- *   - @cloudbase/js-sdk v2.x 不支持自定义 endpoint，所有请求硬编码到
+ *   - @cloudbase/js-sdk v2.x 不支持自定义 endpoint，核心 API 请求硬编码到
  *     `https://${envId}.${region}.tcb-api.tencentcloudapi.com`；
+ *   - 匿名登录等 auth 请求会走 `https://${envId}.api.tcloudbasegateway.com/v1`
+ *     或被 SDK 组装成同源 `/auth/v1/*` 相对路径；
  *   - CloudBase 免费版禁止加白第三方域名 → 浏览器 CORS 拦截；
  *   - EdgeOne Pages 上由 Edge Function（functions/tcb/[[path]].ts）
  *     反代到 CloudBase 网关并补 CORS 头。
@@ -13,6 +15,12 @@
  * 重写为
  *   <当前页面 origin>/tcb/<path>?<qs>
  *
+ * 同时把
+ *   https://*.api.tcloudbasegateway.com/v1/<path>?<qs>
+ *   /auth/v1/<path>?<qs>
+ * 重写为
+ *   <当前页面 origin>/tcb-gateway/<path>?<qs>
+ *
  * 同时为 LegacyXHR（CloudBase storage / 部分上传链路）做同样改写。
  *
  * 灰度开关：
@@ -20,18 +28,39 @@
  *   - 默认（本地 dev / 回退场景）走原始 endpoint
  */
 
-const TARGET_HOST_FRAGMENT = 'tcb-api.tencentcloudapi.com'
-const PROXY_PREFIX = '/tcb'
+const TCB_API_HOST_FRAGMENT = 'tcb-api.tencentcloudapi.com'
+const TCB_GATEWAY_HOST_FRAGMENT = 'api.tcloudbasegateway.com'
+const TCB_API_PROXY_PREFIX = '/tcb'
+const TCB_GATEWAY_PROXY_PREFIX = '/tcb-gateway'
 const FLAG_KEY = '__cloudbasePatchInstalled__'
 
-/** 把 CloudBase 原始 URL 改写为同源 /tcb 路径 */
+/** 把 CloudBase 原始 URL 改写为同源代理路径 */
 function rewriteUrl(input: string): string {
-  if (!input || !input.includes(TARGET_HOST_FRAGMENT)) return input
+  if (!input) return input
   try {
-    const parsed = new URL(input)
-    if (!parsed.host.includes(TARGET_HOST_FRAGMENT)) return input
-    // 例：/auth.getJwt → /tcb/auth.getJwt
-    const newPath = `${PROXY_PREFIX}${parsed.pathname}`
+    const parsed = new URL(input, window.location.origin)
+    const isRelativeOrSameOrigin =
+      !/^[a-z][a-z\d+\-.]*:/i.test(input) ||
+      parsed.origin === window.location.origin
+
+    let newPath = ''
+    if (parsed.host.includes(TCB_API_HOST_FRAGMENT)) {
+      // 例：/auth.getJwt → /tcb/auth.getJwt
+      newPath = `${TCB_API_PROXY_PREFIX}${parsed.pathname}`
+    } else if (parsed.host.includes(TCB_GATEWAY_HOST_FRAGMENT)) {
+      // 例：/v1/auth/v1/token → /tcb-gateway/v1/auth/v1/token
+      newPath = `${TCB_GATEWAY_PROXY_PREFIX}${parsed.pathname}`
+    } else if (
+      isRelativeOrSameOrigin &&
+      (parsed.pathname.startsWith('/auth/v1/') ||
+        parsed.pathname.startsWith('/v1/auth/'))
+    ) {
+      // SDK 的匿名登录可能被组成同源相对路径，避免落到 EdgeOne 页面路由。
+      newPath = `${TCB_GATEWAY_PROXY_PREFIX}${parsed.pathname}`
+    } else {
+      return input
+    }
+
     const newUrl = new URL(newPath + parsed.search + parsed.hash, window.location.origin)
     return newUrl.toString()
   } catch {

@@ -22,6 +22,15 @@
 | [`.gitlab-ci.yml`](.gitlab-ci.yml) | 构建并部署 EdgeOne Pages preview / production |
 | [`edgeone.json`](edgeone.json) | EdgeOne Pages 构建配置 |
 
+### 部署子账号信息
+
+| 项 | 值 |
+| --- | --- |
+| 主账号 ID | `100020553782` |
+| 子账号用户名 | `zy-memoir` |
+| 快捷登录 | https://cloud.tencent.com/login/subAccount/100020553782?type=subAccount&username=zy-memoir |
+| SecretId / SecretKey | 不入仓库；存放在 GitHub Actions Secrets：`TENCENT_SECRET_ID` / `TENCENT_SECRET_KEY` |
+
 ### CI 变量
 
 | 变量 | 用途 |
