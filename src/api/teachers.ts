@@ -4,6 +4,7 @@
  * 云函数契约：
  *   - listTeachers (公开只读)            → 主页老师风采区精简字段（id / name / role / avatar / recordings）
  *   - updateTeacherAvatar (HMAC)         → 老师换头像（仅本人或 admin）
+ *   - removeTeacherAvatar (HMAC + COS 清理) → 删除本人头像
  *   - addTeacherRecording (HMAC)         → 新增老师录音（PRD/Q-PLAN-12 不限段数；单段 ≤ 60 s）
  *   - removeTeacherRecording (HMAC + COS 清理) → 删除指定 recording
  *
@@ -99,6 +100,17 @@ export async function updateTeacherAvatar(input: {
 }): Promise<{ avatar: AvatarRef }> {
   const res = await callFunction<CloudFnResponse<{ avatar: AvatarRef }>>(
     'updateTeacherAvatar',
+    input,
+  )
+  return unwrap(res)
+}
+
+export async function removeTeacherAvatar(input: {
+  token: string
+  teacherId?: number
+}): Promise<{ avatar: null }> {
+  const res = await callFunction<CloudFnResponse<{ avatar: null }>>(
+    'removeTeacherAvatar',
     input,
   )
   return unwrap(res)

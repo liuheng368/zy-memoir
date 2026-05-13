@@ -16,6 +16,7 @@ import { useAuthStore } from '@/stores/auth'
 import {
   addTeacherRecording,
   getTeacherDetail,
+  removeTeacherAvatar,
   removeTeacherRecording,
   updateTeacherAvatar,
   type RecordingRef,
@@ -194,6 +195,12 @@ async function doUploadAvatar(file: File): Promise<void> {
   }
 }
 
+function requestRemoveAvatar(): void {
+  if (effectiveMode.value !== 'owner' || !detail.value?.avatar?.url) return
+  pendingDelete.value = { kind: 'avatar', id: 'avatar', label: '头像' }
+  confirmOpen.value = true
+}
+
 function guessExt(file: File | Blob): string {
   const t = (file as File).type || ''
   if (t.includes('png')) return 'png'
@@ -201,13 +208,17 @@ function guessExt(file: File | Blob): string {
   return 'jpg'
 }
 
-/* -------------------- 长按删除（仅录音） -------------------- */
-const pendingDelete = ref<{ id: string; label: string } | null>(null)
+/* -------------------- 长按删除（头像 / 录音） -------------------- */
+type DeleteTarget =
+  | { kind: 'avatar'; id: 'avatar'; label: string }
+  | { kind: 'recording'; id: string; label: string }
+
+const pendingDelete = ref<DeleteTarget | null>(null)
 const confirmOpen = ref(false)
 const LONG_PRESS_MS = 600
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
 
-function onLongPressStart(target: { id: string; label: string }): void {
+function onLongPressStart(target: DeleteTarget): void {
   if (effectiveMode.value !== 'owner') return
   cancelLongPress()
   longPressTimer = setTimeout(() => {
@@ -228,14 +239,22 @@ async function onConfirmDelete(): Promise<void> {
   const tid = toast.loading('删除中…')
   try {
     const target = pendingDelete.value
-    const rec = detail.value.recordings.find((x) => x.id === target.id)
-    if (rec && audioPlayer.isPlaying(rec.url)) audioPlayer.stop()
-    const r = await removeTeacherRecording({
-      token: token.value,
-      recordingId: target.id,
-      teacherId: detail.value.id,
-    })
-    detail.value.recordings = r.recordings
+    if (target.kind === 'avatar') {
+      await removeTeacherAvatar({
+        token: token.value,
+        teacherId: detail.value.id,
+      })
+      detail.value.avatar = undefined
+    } else {
+      const rec = detail.value.recordings.find((x) => x.id === target.id)
+      if (rec && audioPlayer.isPlaying(rec.url)) audioPlayer.stop()
+      const r = await removeTeacherRecording({
+        token: token.value,
+        recordingId: target.id,
+        teacherId: detail.value.id,
+      })
+      detail.value.recordings = r.recordings
+    }
     toast.success('已删除')
     emit('updated')
   } catch (err) {
@@ -418,6 +437,15 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
               >
                 {{ detail.avatar?.url ? '换头像' : '上传头像' }}
               </button>
+              <button
+                v-if="effectiveMode === 'owner' && detail.avatar?.url"
+                type="button"
+                class="avatar-remove"
+                :disabled="avatarStatus === 'uploading'"
+                @click="requestRemoveAvatar"
+              >
+                删除头像
+              </button>
               <input
                 ref="avatarInputRef"
                 type="file"
@@ -442,7 +470,7 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
                   class="rec-item"
                   :class="{ deletable: effectiveMode === 'owner' && r.id }"
                   @pointerdown="
-                    r.id && onLongPressStart({ id: r.id, label: '这段录音' })
+                    r.id && onLongPressStart({ kind: 'recording', id: r.id, label: '这段录音' })
                   "
                   @pointerup="cancelLongPress"
                   @pointerleave="cancelLongPress"
@@ -474,7 +502,7 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
                     class="rec-delete"
                     aria-label="删除录音"
                     @click.stop="
-                      pendingDelete = { id: r.id!, label: '这段录音' };
+                      pendingDelete = { kind: 'recording', id: r.id!, label: '这段录音' };
                       confirmOpen = true;
                       cancelLongPress();
                     "
@@ -761,6 +789,19 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
   font-size: 13px;
 }
 .avatar-change:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.avatar-remove {
+  appearance: none;
+  border: 1px solid rgba(191, 75, 75, 0.4);
+  color: #b54444;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 18px;
+  font-size: 13px;
+}
+.avatar-remove:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

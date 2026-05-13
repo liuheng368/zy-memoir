@@ -28,6 +28,7 @@ import {
   addStudentPhoto,
   addStudentRecording,
   getStudentDetail,
+  removeStudentAvatar,
   removeStudentPhoto,
   removeStudentRecording,
   updateStudentAvatar,
@@ -275,6 +276,12 @@ async function doUploadAvatar(file: File): Promise<void> {
   }
 }
 
+function requestRemoveAvatar(): void {
+  if (effectiveMode.value !== 'owner' || !detail.value?.avatar?.url) return
+  pendingDelete.value = { kind: 'avatar', id: 'avatar', label: '头像' }
+  confirmOpen.value = true
+}
+
 function guessExt(file: File | Blob): string {
   const t = (file as File).type || ''
   if (t.includes('png')) return 'png'
@@ -345,6 +352,7 @@ async function doUploadPhoto(file: File): Promise<void> {
 
 /* -------------------- 长按删除（照片 / 录音通用） -------------------- */
 type DeleteTarget =
+  | { kind: 'avatar'; id: 'avatar'; label: string }
   | { kind: 'photo'; id: string; label: string }
   | { kind: 'recording'; id: string; label: string }
 
@@ -374,7 +382,13 @@ async function onConfirmDelete(): Promise<void> {
   const target = pendingDelete.value
   const tid = toast.loading('删除中…')
   try {
-    if (target.kind === 'photo') {
+    if (target.kind === 'avatar') {
+      await removeStudentAvatar({
+        token: token.value,
+        studentId: detail.value.id,
+      })
+      detail.value.avatar = null
+    } else if (target.kind === 'photo') {
       const r = await removeStudentPhoto({
         token: token.value,
         photoId: target.id,
@@ -566,6 +580,15 @@ function recBlobKb(): string {
                 @click="pickAvatar"
               >
                 {{ detail.avatar?.url ? '换头像' : '上传头像' }}
+              </button>
+              <button
+                v-if="effectiveMode === 'owner' && detail.avatar?.url"
+                type="button"
+                class="avatar-remove"
+                :disabled="avatarStatus === 'uploading'"
+                @click="requestRemoveAvatar"
+              >
+                删除头像
               </button>
               <input
                 ref="avatarInputRef"
@@ -994,6 +1017,19 @@ function recBlobKb(): string {
   font-size: 13px;
 }
 .avatar-change:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.avatar-remove {
+  appearance: none;
+  border: 1px solid rgba(191, 75, 75, 0.4);
+  color: #b54444;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 18px;
+  font-size: 13px;
+}
+.avatar-remove:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

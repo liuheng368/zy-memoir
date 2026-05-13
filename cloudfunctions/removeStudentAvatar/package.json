@@ -1,0 +1,9 @@
+{
+  "name": "removeStudentAvatar",
+  "version": "1.0.0",
+  "description": "学生删除头像（HMAC 校验 + COS 清理）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.13.0"
+  }
+}

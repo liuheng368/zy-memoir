@@ -5,6 +5,7 @@
  *   - listStudents (公开只读)            → 主页头像墙精简字段 + 派生 photoCount/recordingCount
  *   - getStudentDetail (公开只读)        → 学生浮层完整 schema (intro/avatar/photos/recordings)
  *   - updateStudentIntro (HMAC)          → 学生简介保存（≤ 300 字）
+ *   - removeStudentAvatar (HMAC + COS 清理) → 删除本人头像
  *   - addStudentPhoto (HMAC)             → 学生新增照片（≤ 3 张）
  *   - removeStudentPhoto (HMAC + COS 清理) → 删除指定 photo
  *   - addStudentRecording (HMAC)         → 学生新增录音（≤ 5 段、单段 ≤ 60 s）
@@ -126,6 +127,17 @@ export async function updateStudentAvatar(input: {
 }): Promise<{ avatar: AvatarRef }> {
   const res = await callFunction<CloudFnResponse<{ avatar: AvatarRef }>>(
     'updateStudentAvatar',
+    input,
+  )
+  return unwrap(res)
+}
+
+export async function removeStudentAvatar(input: {
+  token: string
+  studentId?: number
+}): Promise<{ avatar: null }> {
+  const res = await callFunction<CloudFnResponse<{ avatar: null }>>(
+    'removeStudentAvatar',
     input,
   )
   return unwrap(res)
