@@ -114,6 +114,7 @@
 
 ## 5. 常用脚本
 
+
 | 脚本 | 命令 | 作用 |
 | --- | --- | --- |
 | [`scripts/deploy.mjs`](scripts/deploy.mjs) | `pnpm run deploy:fn` | 打印 CloudBase 云函数部署命令 |
