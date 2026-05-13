@@ -17,6 +17,7 @@
 import { computed, ref } from 'vue'
 import type { StudentSummary } from '@/api/students'
 import { defaultStudentAvatar } from '@/utils/defaultAvatar'
+import { proxiedMediaUrl } from '@/utils/mediaUrl'
 
 const props = withDefaults(
   defineProps<{
@@ -66,7 +67,7 @@ const transformStyle = computed(() => {
  * 用 `<img>` 统一渲染，避免「文字色块 / 真照片」两套渲染分支。
  */
 const avatarSrc = computed(
-  () => props.student.avatar?.url || defaultStudentAvatar(props.student.gender),
+  () => proxiedMediaUrl(props.student.avatar?.url) || defaultStudentAvatar(props.student.gender),
 )
 /** 是否为默认 SVG（用于关闭淡入动画 — SVG 加载几乎瞬时） */
 const isDefault = computed(() => !props.student.avatar?.url)

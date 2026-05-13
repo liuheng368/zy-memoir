@@ -18,6 +18,7 @@ import type { TeacherFull } from '@/api/teachers'
 import { useAudioPlayer } from '@/composables/useAudioPlayer'
 import { toast } from '@/composables/useToast'
 import { defaultTeacherAvatar } from '@/utils/defaultAvatar'
+import { proxiedMediaUrl } from '@/utils/mediaUrl'
 
 const props = defineProps<{
   teacher: TeacherFull
@@ -57,7 +58,7 @@ const roleLabel = computed(() => {
 })
 
 /** 头像 src 兜底链：上传图 → 默认 SVG（plan G11） */
-const avatarSrc = computed(() => props.teacher.avatar?.url || defaultTeacherAvatar())
+const avatarSrc = computed(() => proxiedMediaUrl(props.teacher.avatar?.url) || defaultTeacherAvatar())
 
 /** 把 60s 内的整秒转成 0:42 这种文案 */
 function fmtDuration(sec: number): string {

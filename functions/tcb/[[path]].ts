@@ -79,6 +79,17 @@ interface OnRequestContext {
   params: Record<string, string | string[] | undefined>
 }
 
+function isAuthGatewayPath(tail: string): boolean {
+  const cleanTail = tail.replace(/^\/+/, '')
+  return cleanTail.startsWith('auth/v1/') || cleanTail.startsWith('v1/auth/')
+}
+
+function normalizeGatewayPath(tail: string): string {
+  const cleanTail = tail.replace(/^\/+/, '')
+  if (!cleanTail) return '/v1'
+  return cleanTail.startsWith('v1/') ? `/${cleanTail}` : `/v1/${cleanTail}`
+}
+
 /**
  * EdgeOne Pages Functions 标准入口
  * 文档：https://edgeone.ai/document/162935826921332736
@@ -98,7 +109,9 @@ export async function onRequest(context: OnRequestContext): Promise<Response> {
 
   const envId = env?.TCB_ENV_ID || DEFAULT_ENV_ID
   const region = env?.TCB_REGION || DEFAULT_REGION
-  const targetUrl = `https://${envId}.${region}.tcb-api.tencentcloudapi.com/${tail}${incomingUrl.search}`
+  const targetUrl = isAuthGatewayPath(tail)
+    ? `https://${envId}.api.tcloudbasegateway.com${normalizeGatewayPath(tail)}${incomingUrl.search}`
+    : `https://${envId}.${region}.tcb-api.tencentcloudapi.com/${tail}${incomingUrl.search}`
 
   // 复制请求头，剔除 hop-by-hop / 边缘代理污染头
   const forwardHeaders = new Headers()

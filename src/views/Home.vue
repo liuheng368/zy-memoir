@@ -11,10 +11,10 @@
  * 行为（G4 起）：
  *   - onMounted 调 useClassDataStore().fetchAll() —— Promise.allSettled 并发拉
  *     三段，互不阻塞
- *   - 点学生头像 → 打开 <StudentOverlay>；登录学生点自己 → owner 模式，否则 visitor
- *   - 点老师头像 → 打开 <TeacherOverlay>；登录老师点自己 → owner 模式（可换头像/增删录音），
- *     其它角色（学生 / 游客 / admin / 其他老师） → visitor 模式（仅头像 + 录音播放，
- *     所有编辑入口隐藏）。spec Q-TEACHER-OTHER 已决议为方案 B（与学生体验一致）。
+ *   - 点学生头像 → 打开 <StudentOverlay>；登录学生点自己 / 管理员 → owner 模式，否则 visitor
+ *   - 点老师头像 → 打开 <TeacherOverlay>；登录老师点自己 / 管理员 → owner 模式（可换头像/增删录音），
+ *     其它角色（学生 / 游客 / 其他老师） → visitor 模式（仅头像 + 录音播放，
+ *     所有编辑入口隐藏）。
  *
  * 与登录浮层的关系：
  *   - 路由 `/`  → views/StudentLogin.vue 内部 `<Home />` + 学生登录浮层
@@ -48,6 +48,7 @@ onMounted(() => {
 const studentOverlayOpen = ref(false)
 const currentStudentId = ref<number | null>(null)
 const studentOverlayMode = computed<'owner' | 'visitor'>(() => {
+  if (role.value === 'admin') return 'owner'
   if (
     role.value === 'student' &&
     studentProfile.value?.studentId === currentStudentId.value
@@ -85,6 +86,7 @@ function onStudentOverlayUpdated(): void {
 const teacherOverlayOpen = ref(false)
 const currentTeacherId = ref<number | null>(null)
 const teacherOverlayMode = computed<'owner' | 'visitor'>(() => {
+  if (role.value === 'admin') return 'owner'
   if (
     role.value === 'teacher' &&
     teacherProfile.value?.teacherId === currentTeacherId.value

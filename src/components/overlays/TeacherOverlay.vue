@@ -5,8 +5,8 @@
  * 与学生浮层差异：
  *   - **无自我介绍 / 无照片墙**（PRD 仅要求头像 + 录音）；
  *   - 录音段数**不设上限**（plan Q-PLAN-12 = 默认不限，前端不卡，云函数也不限）；
- *   - 主态判定更严格：必须 `role==='teacher'` 且 `teacherProfile.teacherId === props.teacherId`
- *     才允许 mode='owner'；其它一律 visitor（与 spec Q-TEACHER-OTHER 决议
+ *   - 主态判定更严格：必须 `role==='admin'`，或 `role==='teacher'` 且
+ *     `teacherProfile.teacherId === props.teacherId`，才允许 mode='owner'；其它一律 visitor（与 spec Q-TEACHER-OTHER 决议
  *     「默认不允许其他角色 / 游客点开教师浮层」一致；本组件本身仍兼容 visitor，
  *     由父级决定是否开放点击入口）。
  */
@@ -33,6 +33,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import AvatarCropper from '@/components/common/AvatarCropper.vue'
 import Lightbox from '@/components/common/Lightbox.vue'
 import { defaultTeacherAvatar } from '@/utils/defaultAvatar'
+import { proxiedMediaUrl } from '@/utils/mediaUrl'
 import { isNetworkError, networkErrorMessage } from '@/utils/network'
 import { MAX_RECORDING_SECONDS } from '@/utils/constants'
 
@@ -55,6 +56,7 @@ const { role, teacherProfile, token } = storeToRefs(authStore)
 
 const effectiveMode = computed<'owner' | 'visitor'>(() => {
   if (typeof props.teacherId !== 'number') return 'visitor'
+  if (role.value === 'admin') return props.mode === 'owner' ? 'owner' : 'visitor'
   if (role.value !== 'teacher') return 'visitor'
   if (teacherProfile.value?.teacherId !== props.teacherId) return 'visitor'
   return props.mode === 'owner' ? 'owner' : 'visitor'
@@ -134,7 +136,11 @@ const cropperFile = ref<File | null>(null)
 const lightboxOpen = ref(false)
 
 const lightboxSrc = computed(
-  () => detail.value?.avatar?.url || (detail.value ? defaultTeacherAvatar() : ''),
+  () => proxiedMediaUrl(detail.value?.avatar?.url) || (detail.value ? defaultTeacherAvatar() : ''),
+)
+
+const avatarImgSrc = computed(
+  () => proxiedMediaUrl(detail.value?.avatar?.url) || (detail.value ? defaultTeacherAvatar() : ''),
 )
 
 function onCropConfirmed(blob: Blob): void {
@@ -420,7 +426,7 @@ const ROLE_LABEL: Record<TeacherFull['role'], string> = {
             <section class="avatar-section">
               <div class="avatar-wrap">
                 <img
-                  :src="detail.avatar?.url || defaultTeacherAvatar()"
+                  :src="avatarImgSrc"
                   :alt="detail.name"
                   decoding="async"
                   class="avatar-img"

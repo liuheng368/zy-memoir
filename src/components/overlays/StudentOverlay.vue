@@ -14,7 +14,7 @@
  *               → useRecorder + useMp3Encode + useUpload → addStudentRecording）
  *
  * 游客兜底（plan AC-17）：
- *   - mount 时若 `authStore.isGuest` 或非本人 → 强制 `effectiveMode='visitor'`，
+ *   - mount 时若 `authStore.isGuest` 或非本人 / 非管理员 → 强制 `effectiveMode='visitor'`，
  *     模板根本不渲染编辑入口；deeplink 携带 mode=owner 也无效。
  *
  * 与 G10 的关系：
@@ -47,6 +47,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import AvatarCropper from '@/components/common/AvatarCropper.vue'
 import Lightbox from '@/components/common/Lightbox.vue'
 import { defaultStudentAvatar } from '@/utils/defaultAvatar'
+import { proxiedMediaUrl } from '@/utils/mediaUrl'
 import { isNetworkError, networkErrorMessage } from '@/utils/network'
 import {
   MAX_INTRO_LENGTH,
@@ -78,11 +79,12 @@ const { role, studentProfile, token } = storeToRefs(authStore)
 
 /**
  * 实际模式判定（**plan AC-17 强制兜底**）：
- * - 必须 props.mode === 'owner' + role === 'student' + 学生 id 等于自己；
+ * - props.mode === 'owner' 且满足：role === 'admin'，或 role === 'student' + 学生 id 等于自己；
  * - 任何不满足都降级为 visitor，不渲染编辑入口。
  */
 const effectiveMode = computed<'owner' | 'visitor'>(() => {
   if (typeof props.studentId !== 'number') return 'visitor'
+  if (role.value === 'admin') return props.mode === 'owner' ? 'owner' : 'visitor'
   if (role.value !== 'student') return 'visitor'
   if (studentProfile.value?.studentId !== props.studentId) return 'visitor'
   return props.mode === 'owner' ? 'owner' : 'visitor'
@@ -213,8 +215,20 @@ const cropperFile = ref<File | null>(null)
 const lightboxOpen = ref(false)
 
 const lightboxSrc = computed(
-  () => detail.value?.avatar?.url || (detail.value ? defaultStudentAvatar(detail.value.gender) : ''),
+  () =>
+    proxiedMediaUrl(detail.value?.avatar?.url) ||
+    (detail.value ? defaultStudentAvatar(detail.value.gender) : ''),
 )
+
+const avatarImgSrc = computed(
+  () =>
+    proxiedMediaUrl(detail.value?.avatar?.url) ||
+    (detail.value ? defaultStudentAvatar(detail.value.gender) : ''),
+)
+
+function photoSrc(url: string): string {
+  return proxiedMediaUrl(url) || url
+}
 
 function onCropConfirmed(blob: Blob): void {
   if (!cropperFile.value) return
@@ -564,7 +578,7 @@ function recBlobKb(): string {
                 :class="[`gender-${detail.gender}`]"
               >
                 <img
-                  :src="detail.avatar?.url || defaultStudentAvatar(detail.gender)"
+                  :src="avatarImgSrc"
                   :alt="detail.name"
                   decoding="async"
                   class="avatar-img"
@@ -649,7 +663,7 @@ function recBlobKb(): string {
                   @pointercancel="cancelLongPress"
                   @contextmenu.prevent
                 >
-                  <img :src="p.url" :alt="`${detail.name} 的照片`" loading="lazy" />
+                  <img :src="photoSrc(p.url)" :alt="`${detail.name} 的照片`" loading="lazy" />
                 </div>
                 <button
                   v-if="canAddPhoto"

@@ -16,6 +16,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { Banner } from '@/api/banners'
 import type { SectionStatus } from '@/stores/classData'
 import { BANNER_AUTOPLAY_MS } from '@/utils/constants'
+import { proxiedMediaUrl } from '@/utils/mediaUrl'
 
 const props = defineProps<{
   banners: Banner[]
@@ -60,6 +61,10 @@ function prev() {
 function go(i: number) {
   if (i < 0 || i >= props.banners.length) return
   current.value = i
+}
+
+function imageSrc(url: string): string {
+  return proxiedMediaUrl(url) || url
 }
 
 function onMouseEnter() {
@@ -107,7 +112,7 @@ onBeforeUnmount(() => stop())
         :class="{ active: i === current }"
         :aria-hidden="i === current ? 'false' : 'true'"
       >
-        <img :src="b.url" :alt="b.caption ?? `合影 ${i + 1}`" loading="lazy" />
+        <img :src="imageSrc(b.url)" :alt="b.caption ?? `合影 ${i + 1}`" loading="lazy" />
         <div v-if="b.caption" class="caption">{{ b.caption }}</div>
       </div>
 

@@ -41,6 +41,10 @@ const TCB_GATEWAY_PROXY_PREFIX = '/tcb-gateway'
 const COS_PROXY_PREFIX = '/cos'
 const FLAG_KEY = '__cloudbasePatchInstalled__'
 
+function isAuthGatewayPath(pathname: string): boolean {
+  return pathname.startsWith('/auth/v1/') || pathname.startsWith('/v1/auth/')
+}
+
 function shouldProxyCos(method?: string): boolean {
   const normalized = (method || 'GET').toUpperCase()
   return ['PUT', 'POST', 'PATCH', 'DELETE', 'OPTIONS'].includes(normalized)
@@ -56,7 +60,10 @@ function rewriteUrl(input: string, method?: string): string {
       parsed.origin === window.location.origin
 
     let newPath = ''
-    if (parsed.host.includes(TCB_API_HOST_FRAGMENT)) {
+    if (parsed.host.includes(TCB_API_HOST_FRAGMENT) && isAuthGatewayPath(parsed.pathname)) {
+      // auth/token 类接口必须走 CloudBase gateway；误走 tcb-api 会返回 401。
+      newPath = `${TCB_GATEWAY_PROXY_PREFIX}${parsed.pathname}`
+    } else if (parsed.host.includes(TCB_API_HOST_FRAGMENT)) {
       // 例：/auth.getJwt → /tcb/auth.getJwt
       newPath = `${TCB_API_PROXY_PREFIX}${parsed.pathname}`
     } else if (parsed.host.includes(TCB_GATEWAY_HOST_FRAGMENT)) {
@@ -67,8 +74,7 @@ function rewriteUrl(input: string, method?: string): string {
       newPath = `${COS_PROXY_PREFIX}${parsed.pathname}`
     } else if (
       isRelativeOrSameOrigin &&
-      (parsed.pathname.startsWith('/auth/v1/') ||
-        parsed.pathname.startsWith('/v1/auth/'))
+      isAuthGatewayPath(parsed.pathname)
     ) {
       // SDK 的匿名登录可能被组成同源相对路径，避免落到 EdgeOne 页面路由。
       newPath = `${TCB_GATEWAY_PROXY_PREFIX}${parsed.pathname}`

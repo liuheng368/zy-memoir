@@ -37,6 +37,7 @@ import { useUpload, uuidShort } from '@/composables/useUpload'
 import { useToast } from '@/composables/useToast'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import { MAX_IMAGE_BYTES, ROUTES } from '@/utils/constants'
+import { proxiedMediaUrl } from '@/utils/mediaUrl'
 import { isNetworkError, networkErrorMessage } from '@/utils/network'
 
 const route = useRoute()
@@ -110,6 +111,10 @@ const isErrorBanners = computed(() => bannersState.value.status === 'error')
 function pickFile() {
   if (submitting.value) return
   fileInputRef.value?.click()
+}
+
+function imageSrc(url: string): string {
+  return proxiedMediaUrl(url) || url
 }
 
 async function refreshBanners() {
@@ -314,7 +319,7 @@ function onConfirmCancel() {
         <ul v-else class="grid">
           <li v-for="b in bannerList" :key="b.id" class="cell">
             <div class="img-wrap">
-              <img :src="b.url" :alt="b.caption ?? '合影'" loading="lazy" />
+              <img :src="imageSrc(b.url)" :alt="b.caption ?? '合影'" loading="lazy" />
               <button
                 type="button"
                 class="remove-btn"
