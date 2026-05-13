@@ -38,15 +38,39 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check CloudBase deploy secrets
+        id: secrets
+        shell: bash
+        env:
+          AUTH_HMAC_KEY: ${{ secrets.AUTH_HMAC_KEY }}
+          ADMIN_HMAC_KEY: ${{ secrets.ADMIN_HMAC_KEY }}
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
+        run: |
+          missing=()
+          [[ -n "$AUTH_HMAC_KEY" ]] || missing+=("AUTH_HMAC_KEY")
+          [[ -n "$ADMIN_HMAC_KEY" ]] || missing+=("ADMIN_HMAC_KEY")
+          [[ -n "$TENCENT_SECRET_ID" ]] || missing+=("TENCENT_SECRET_ID")
+          [[ -n "$TENCENT_SECRET_KEY" ]] || missing+=("TENCENT_SECRET_KEY")
+
+          if (( ${#missing[@]} > 0 )); then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skip CloudBase functions deploy; missing GitHub Secrets: ${missing[*]}"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # CI 专用：把 cloudbaserc.json 中 envVariables 占位符替换成真实 HMAC
       # 仅修改 workspace 临时副本，不写回仓库；本地不会执行此步
       - name: Inject HMAC envs into cloudbaserc.json (CI only)
+        if: steps.secrets.outputs.ready == 'true'
         run: node scripts/ci-inject-fn-env.mjs
         env:
           AUTH_HMAC_KEY: ${{ secrets.AUTH_HMAC_KEY }}
           ADMIN_HMAC_KEY: ${{ secrets.ADMIN_HMAC_KEY }}
 
       - name: Deploy CloudBase functions
+        if: steps.secrets.outputs.ready == 'true'
         uses: TencentCloudBase/cloudbase-action@v2
         with:
           secretId: ${{ secrets.TENCENT_SECRET_ID }}
@@ -57,4 +81,8 @@ jobs:
 
       - name: Done
         run: |
-          echo "CloudBase functions deployed."
+          if [[ "${{ steps.secrets.outputs.ready }}" == "true" ]]; then
+            echo "CloudBase functions deployed."
+          else
+            echo "CloudBase functions deploy skipped because required GitHub Secrets are not configured."
+          fi
