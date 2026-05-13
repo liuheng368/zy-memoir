@@ -21,6 +21,11 @@
  * 重写为
  *   <当前页面 origin>/tcb-gateway/<path>?<qs>
  *
+ * 以及把浏览器直传 COS 的写请求
+ *   PUT https://*.cos.<region>.myqcloud.com/<path>
+ * 重写为
+ *   PUT <当前页面 origin>/cos/<path>
+ *
  * 同时为 LegacyXHR（CloudBase storage / 部分上传链路）做同样改写。
  *
  * 灰度开关：
@@ -30,12 +35,19 @@
 
 const TCB_API_HOST_FRAGMENT = 'tcb-api.tencentcloudapi.com'
 const TCB_GATEWAY_HOST_FRAGMENT = 'api.tcloudbasegateway.com'
+const COS_HOST_PATTERN = /\.cos\.[^.]+\.myqcloud\.com$/i
 const TCB_API_PROXY_PREFIX = '/tcb'
 const TCB_GATEWAY_PROXY_PREFIX = '/tcb-gateway'
+const COS_PROXY_PREFIX = '/cos'
 const FLAG_KEY = '__cloudbasePatchInstalled__'
 
+function shouldProxyCos(method?: string): boolean {
+  const normalized = (method || 'GET').toUpperCase()
+  return ['PUT', 'POST', 'PATCH', 'DELETE', 'OPTIONS'].includes(normalized)
+}
+
 /** 把 CloudBase 原始 URL 改写为同源代理路径 */
-function rewriteUrl(input: string): string {
+function rewriteUrl(input: string, method?: string): string {
   if (!input) return input
   try {
     const parsed = new URL(input, window.location.origin)
@@ -50,6 +62,9 @@ function rewriteUrl(input: string): string {
     } else if (parsed.host.includes(TCB_GATEWAY_HOST_FRAGMENT)) {
       // 例：/v1/auth/v1/token → /tcb-gateway/v1/auth/v1/token
       newPath = `${TCB_GATEWAY_PROXY_PREFIX}${parsed.pathname}`
+    } else if (COS_HOST_PATTERN.test(parsed.host) && shouldProxyCos(method)) {
+      // 例：PUT /banners/x.jpg → PUT /cos/banners/x.jpg，规避浏览器到 COS 的 CORS 预检。
+      newPath = `${COS_PROXY_PREFIX}${parsed.pathname}`
     } else if (
       isRelativeOrSameOrigin &&
       (parsed.pathname.startsWith('/auth/v1/') ||
@@ -88,11 +103,11 @@ export function installCloudBaseProxyPatch(): void {
   ): Promise<Response> {
     let nextInput: RequestInfo | URL = input
     if (typeof input === 'string') {
-      nextInput = rewriteUrl(input)
+      nextInput = rewriteUrl(input, init?.method)
     } else if (input instanceof URL) {
-      nextInput = rewriteUrl(input.toString())
+      nextInput = rewriteUrl(input.toString(), init?.method)
     } else if (typeof Request !== 'undefined' && input instanceof Request) {
-      const rewritten = rewriteUrl(input.url)
+      const rewritten = rewriteUrl(input.url, init?.method || input.method)
       if (rewritten !== input.url) {
         nextInput = new Request(rewritten, input)
       }
@@ -112,7 +127,7 @@ export function installCloudBaseProxyPatch(): void {
       ...rest: unknown[]
     ): void {
       const original = typeof url === 'string' ? url : url.toString()
-      const rewritten = rewriteUrl(original)
+      const rewritten = rewriteUrl(original, method)
       // @ts-expect-error 透传剩余可变参数到原生 open
       return originalOpen.call(this, method, rewritten, ...rest)
     } as typeof XMLHttpRequest.prototype.open
