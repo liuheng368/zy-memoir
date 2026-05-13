@@ -124,7 +124,8 @@
               "memorySize": 128,
               "timeout": 5,
               "envVariables": {
-                "AUTH_HMAC_KEY": "与 studentLogin 共用同一密钥"
+                "AUTH_HMAC_KEY": "与 studentLogin 共用同一密钥",
+                "ADMIN_HMAC_KEY": "与 adminCheck 共用同一密钥"
               }
             },
             {
@@ -164,7 +165,8 @@
               "memorySize": 128,
               "timeout": 5,
               "envVariables": {
-                "AUTH_HMAC_KEY": "与 teacherLogin 共用同一密钥"
+                "AUTH_HMAC_KEY": "与 teacherLogin 共用同一密钥",
+                "ADMIN_HMAC_KEY": "与 adminCheck 共用同一密钥"
               }
             },
             {
