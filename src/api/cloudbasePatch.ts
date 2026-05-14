@@ -50,15 +50,6 @@ function shouldProxyCos(method?: string): boolean {
   return ['PUT', 'POST', 'PATCH', 'DELETE', 'OPTIONS'].includes(normalized)
 }
 
-function appendEdgeOnePreviewParams(url: URL): void {
-  const current = new URLSearchParams(window.location.search)
-  current.forEach((value, key) => {
-    if (key.startsWith('eo_') && !url.searchParams.has(key)) {
-      url.searchParams.set(key, value)
-    }
-  })
-}
-
 /** 把 CloudBase 原始 URL 改写为同源代理路径 */
 function rewriteUrl(input: string, method?: string): string {
   if (!input) return input
@@ -92,7 +83,6 @@ function rewriteUrl(input: string, method?: string): string {
     }
 
     const newUrl = new URL(newPath + parsed.search + parsed.hash, window.location.origin)
-    appendEdgeOnePreviewParams(newUrl)
     return newUrl.toString()
   } catch {
     // 非合法 URL（可能是相对路径），不动

@@ -87,7 +87,6 @@ function isAuthGatewayPath(tail: string): boolean {
 function normalizeGatewayPath(tail: string): string {
   const cleanTail = tail.replace(/^\/+/, '')
   if (!cleanTail) return '/v1'
-  if (cleanTail.startsWith('auth/v1/')) return `/${cleanTail}`
   return cleanTail.startsWith('v1/') ? `/${cleanTail}` : `/v1/${cleanTail}`
 }
 
