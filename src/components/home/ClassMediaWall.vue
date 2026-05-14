@@ -252,9 +252,6 @@ function formatDuration(sec?: number): string {
         <h2>回忆散落</h2>
         <p>照片和语音会随机铺在这里，像一面会慢慢长大的班级墙。</p>
       </div>
-      <button type="button" class="refresh-btn" :disabled="status === 'loading'" @click="refresh">
-        刷新
-      </button>
     </header>
 
     <div class="composer">
@@ -387,7 +384,6 @@ function formatDuration(sec?: number): string {
   color: var(--color-text-soft);
 }
 
-.refresh-btn,
 .action-btn,
 .link-btn {
   min-height: 36px;
@@ -406,8 +402,7 @@ function formatDuration(sec?: number): string {
   border-color: #ff7a8e;
 }
 
-.action-btn:disabled,
-.refresh-btn:disabled {
+.action-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -675,8 +670,7 @@ function formatDuration(sec?: number): string {
   }
 
   .action-btn,
-  .link-btn,
-  .refresh-btn {
+  .link-btn {
     padding: 0 12px;
   }
 }
