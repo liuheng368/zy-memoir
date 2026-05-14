@@ -19,6 +19,30 @@
   </head>
   <body>
     <div id="app"></div>
+    <script>
+      ;(function () {
+        var key = 'zy-edgeone-preview-params'
+        var merged = new URLSearchParams()
+        try {
+          var cached = sessionStorage.getItem(key)
+          if (cached) {
+            new URLSearchParams(cached).forEach(function (value, name) {
+              if (name.indexOf('eo_') === 0) merged.set(name, value)
+            })
+          }
+        } catch (e) {}
+        ;[window.location.search, (window.location.hash.split('?')[1] || '')].forEach(function (source) {
+          new URLSearchParams(source).forEach(function (value, name) {
+            if (name.indexOf('eo_') === 0) merged.set(name, value)
+          })
+        })
+        if ([].slice.call(merged.keys()).length) {
+          try {
+            sessionStorage.setItem(key, merged.toString())
+          } catch (e) {}
+        }
+      })()
+    </script>
     <!--
       首屏错误兜底：在 Vue 还未挂载之前 hook window.onerror / unhandledrejection。
       若 SPA 因任何同步/异步异常导致空白，把错误信息直接渲染到 #app，

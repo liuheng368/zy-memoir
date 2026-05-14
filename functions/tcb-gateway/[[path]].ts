@@ -13,6 +13,8 @@ const DEFAULT_ENV_ID = 'zy-memoir-d5gaxbvyxe80564f4'
 
 const HOP_BY_HOP_REQUEST_HEADERS = new Set([
   'host',
+  'origin',
+  'referer',
   'connection',
   'keep-alive',
   'transfer-encoding',

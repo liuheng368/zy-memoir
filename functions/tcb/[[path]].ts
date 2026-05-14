@@ -29,6 +29,8 @@ const DEFAULT_REGION = 'ap-shanghai'
 /** 不应该往后端转发的浏览器/边缘网络专属头 */
 const HOP_BY_HOP_REQUEST_HEADERS = new Set([
   'host',
+  'origin',
+  'referer',
   'connection',
   'keep-alive',
   'transfer-encoding',
