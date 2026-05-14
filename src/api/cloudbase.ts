@@ -22,6 +22,10 @@ let _app: App | null = null
 let _auth: Auth | null = null
 let _anonAuthPromise: Promise<void> | null = null
 
+function shouldSkipAnonAuth(): boolean {
+  return import.meta.env.VITE_TCB_SKIP_ANON_AUTH === 'true'
+}
+
 /** 读取环境 ID；未配置时抛出可定位的错误，避免静默 401 */
 function readEnvId(): string {
   const envId = import.meta.env.VITE_TCB_ENV_ID
@@ -64,6 +68,7 @@ export function getDB(): Database {
  * 否则会被 CloudBase 网关返回 INVALID_USER / 调用拒绝。
  */
 export async function ensureAnonAuth(): Promise<void> {
+  if (shouldSkipAnonAuth()) return
   if (_anonAuthPromise) return _anonAuthPromise
   _anonAuthPromise = (async () => {
     const auth = getAuth()
