@@ -162,6 +162,7 @@ function retryStudents() {
 <style scoped>
 .home {
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -172,8 +173,16 @@ function retryStudents() {
 
 @media (max-width: 640px) {
   .home {
-    padding: 12px;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
     gap: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .home {
+    padding-left: 8px;
+    padding-right: 8px;
+    gap: 10px;
   }
 }
 </style>

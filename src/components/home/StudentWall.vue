@@ -111,6 +111,7 @@ function handleClick(s: StudentSummary) {
 .section-head {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -148,6 +149,11 @@ function handleClick(s: StudentSummary) {
 }
 
 @media (max-width: 768px) {
+  .student-wall {
+    padding: 16px 12px;
+    border-radius: var(--radius-md);
+  }
+
   .grid {
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
@@ -155,8 +161,13 @@ function handleClick(s: StudentSummary) {
 }
 
 @media (max-width: 360px) {
+  .student-wall {
+    padding: 14px 10px;
+  }
+
   .grid {
     grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
   }
 }
 

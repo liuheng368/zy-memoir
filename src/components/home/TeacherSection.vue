@@ -89,6 +89,7 @@ function handlePlay(p: { teacher: TeacherFull; index: number }) {
 .section-head {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -112,6 +113,11 @@ function handlePlay(p: { teacher: TeacherFull; index: number }) {
 }
 
 @media (max-width: 640px) {
+  .teacher-section {
+    padding: 16px 12px;
+    border-radius: var(--radius-md);
+  }
+
   .grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
@@ -119,6 +125,10 @@ function handlePlay(p: { teacher: TeacherFull; index: number }) {
 }
 
 @media (max-width: 380px) {
+  .teacher-section {
+    padding: 14px 10px;
+  }
+
   .grid {
     grid-template-columns: 1fr;
   }

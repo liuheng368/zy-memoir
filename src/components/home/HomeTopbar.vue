@@ -250,15 +250,18 @@ onBeforeUnmount(() => {
 .title {
   display: flex;
   align-items: baseline;
+  flex: 1 1 260px;
+  flex-wrap: wrap;
   gap: 6px;
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--color-text);
+  min-width: 0;
 }
 
 .title-main {
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .title-sub {
@@ -270,6 +273,8 @@ onBeforeUnmount(() => {
 .actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -455,11 +460,41 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) {
+  .topbar {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
   .title {
     font-size: 14px;
   }
+
   .title-sub {
     font-size: 12px;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .guest-tip {
+    position: fixed;
+    top: auto;
+    right: 12px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: 12px;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .guest-tip::before {
+    display: none;
+  }
+
+  .link-btn {
+    padding: 6px 8px;
   }
 }
 </style>

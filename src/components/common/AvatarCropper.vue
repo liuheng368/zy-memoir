@@ -35,7 +35,10 @@ const emit = defineEmits<{
   (e: 'reselect'): void
 }>()
 
-const DISPLAY = 320 // 画布显示边长（CSS 像素）
+const DISPLAY =
+  typeof window !== 'undefined'
+    ? Math.min(320, Math.max(260, window.innerWidth - 68))
+    : 320 // 画布显示边长（CSS 像素）
 const dpr = typeof window !== 'undefined' ? Math.max(1, Math.min(2, window.devicePixelRatio || 1)) : 1
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -347,6 +350,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: auto;
   /* 用 max() 把 safe-area 纳入 padding，避免裁剪卡片被刘海或 home indicator 遮挡 */
   padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
 }
@@ -357,6 +361,8 @@ onBeforeUnmount(() => {
   border-radius: 14px;
   padding: 18px 18px 14px;
   box-shadow: 0 12px 44px rgba(0, 0, 0, 0.22);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
 }
 .cropper-title {
   font-size: 16px;
@@ -515,5 +521,24 @@ onBeforeUnmount(() => {
 }
 .cropper-fade-leave-to .cropper-card {
   transform: scale(0.98);
+}
+
+@media (max-width: 420px) {
+  .cropper-mask {
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .cropper-card {
+    padding: 16px 14px 14px;
+  }
+
+  .cropper-actions {
+    gap: 8px;
+  }
+
+  .btn {
+    min-height: 42px;
+    padding: 10px 0;
+  }
 }
 </style>

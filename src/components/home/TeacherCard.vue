@@ -123,6 +123,7 @@ function fmtDuration(sec: number): string {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+  min-width: 0;
 }
 
 .teacher-card:hover {
@@ -219,6 +220,7 @@ function fmtDuration(sec: number): string {
   padding: 6px 10px;
   background: var(--color-primary-soft);
   border-radius: 999px;
+  min-width: 0;
 }
 
 .play-btn {
@@ -246,6 +248,8 @@ function fmtDuration(sec: number): string {
   align-items: center;
   gap: 2px;
   height: 18px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .wave i {
@@ -267,5 +271,20 @@ function fmtDuration(sec: number): string {
   margin: 4px 0 0;
   font-size: 11px;
   color: var(--color-text-soft);
+}
+
+@media (max-width: 420px) {
+  .teacher-card {
+    padding: 14px 10px;
+  }
+
+  .avatar {
+    width: 80px;
+    height: 80px;
+  }
+
+  .rec {
+    padding: 6px 8px;
+  }
 }
 </style>

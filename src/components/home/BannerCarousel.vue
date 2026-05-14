@@ -237,12 +237,16 @@ onBeforeUnmount(() => stop())
   position: absolute;
   left: 16px;
   bottom: 32px;
+  max-width: calc(100% - 32px);
   background: rgba(0, 0, 0, 0.4);
   color: #fff;
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 12px;
   backdrop-filter: blur(4px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ctrl {
@@ -323,6 +327,13 @@ onBeforeUnmount(() => stop())
     width: 28px;
     height: 28px;
     font-size: 16px;
+  }
+
+  .caption {
+    left: 12px;
+    right: 12px;
+    bottom: 28px;
+    max-width: none;
   }
 }
 </style>

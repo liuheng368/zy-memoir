@@ -361,6 +361,7 @@ function onConfirmCancel() {
 <style scoped>
 .admin {
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -380,6 +381,7 @@ function onConfirmCancel() {
 .topbar h1 {
   margin: 0;
   font-size: 16px;
+  min-width: 0;
 }
 
 .back {
@@ -623,8 +625,57 @@ function onConfirmCancel() {
 }
 
 @media (max-width: 480px) {
+  .admin {
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .topbar h1 {
+    width: 100%;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .caption-input {
+    font-size: 16px;
+  }
+
+  .upload-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .primary {
+    width: 100%;
+    min-height: 42px;
+  }
+
   .grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 360px) {
+  .admin {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .grid {
+    gap: 8px;
+  }
+
+  .remove-btn {
+    width: 28px;
+    height: 28px;
   }
 }
 </style>

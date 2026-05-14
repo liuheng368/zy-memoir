@@ -174,6 +174,7 @@ async function handleSubmit() {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  overflow: auto;
   /* iOS 上 padding 用 max() 包裹安全区，避免卡片被刘海或 home indicator 遮挡 */
   padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
 }
@@ -189,6 +190,8 @@ async function handleSubmit() {
   flex-direction: column;
   gap: 16px;
   text-align: center;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
 }
 
 .overlay-title {
@@ -232,6 +235,7 @@ async function handleSubmit() {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
+  min-width: 0;
 }
 
 .teacher-option:hover {
@@ -247,11 +251,16 @@ async function handleSubmit() {
   flex: 1;
   font-size: 14px;
   color: var(--color-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .teacher-role {
   font-size: 12px;
   color: var(--color-text-soft);
+  flex-shrink: 0;
 }
 
 .error {
@@ -286,5 +295,33 @@ async function handleSubmit() {
 .overlay-enter-from,
 .overlay-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 420px) {
+  .overlay-mask {
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .overlay-card {
+    padding: 20px 16px;
+    gap: 14px;
+  }
+
+  .primary {
+    width: 100%;
+    min-height: 42px;
+  }
+}
+
+@media (max-width: 360px) {
+  .teacher-option {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .teacher-role {
+    width: 100%;
+    padding-left: 24px;
+  }
 }
 </style>

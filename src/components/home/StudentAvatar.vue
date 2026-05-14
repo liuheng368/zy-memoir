@@ -221,9 +221,27 @@ const ariaLabel = computed(() => {
 
 .counts {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
   margin: 0;
   font-size: 10px;
   color: var(--color-text-soft);
+  max-width: 100%;
+}
+
+@media (max-width: 360px) {
+  .student-avatar {
+    gap: 3px;
+    padding: 3px;
+  }
+
+  .name {
+    font-size: 11px;
+  }
+
+  .counts {
+    gap: 4px;
+  }
 }
 </style>

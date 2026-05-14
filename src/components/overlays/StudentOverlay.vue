@@ -918,6 +918,8 @@ function recBlobKb(): string {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 .mode-badge {
   font-size: 11px;
@@ -939,6 +941,7 @@ function recBlobKb(): string {
   line-height: 1;
   color: #888;
   padding: 0 6px;
+  flex-shrink: 0;
 }
 .close-btn:hover {
   color: #333;
@@ -1361,6 +1364,77 @@ function recBlobKb(): string {
   .overlay-fade-leave-to .overlay-sheet {
     transform: none;
     opacity: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .overlay-sheet {
+    max-height: calc(96dvh - env(safe-area-inset-bottom));
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+  }
+
+  .sheet-header {
+    align-items: flex-start;
+    padding: 12px 14px;
+  }
+
+  .sheet-title {
+    font-size: 16px;
+  }
+
+  .sheet-body {
+    padding: 16px 14px 24px;
+    gap: 18px;
+  }
+
+  .avatar-wrap {
+    width: 88px;
+    height: 88px;
+  }
+
+  .photo-grid {
+    gap: 6px;
+  }
+
+  .intro-textarea {
+    font-size: 16px;
+  }
+
+  .rec-item {
+    gap: 8px;
+    padding: 9px 10px;
+  }
+
+  .rec-meta {
+    gap: 8px;
+  }
+
+  .record-panel {
+    padding: 14px 14px max(18px, env(safe-area-inset-bottom));
+  }
+
+  .btn-rec {
+    flex: 1 1 96px;
+  }
+}
+
+@media (max-width: 360px) {
+  .sheet-body {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .photo-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .rec-duration {
+    width: 32px;
+  }
+
+  .rec-delete {
+    margin-left: 0;
   }
 }
 </style>
