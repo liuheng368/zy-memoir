@@ -88,7 +88,7 @@ export function useUpload() {
   }
 
   async function uploadOnce(params: UploadParams): Promise<UploadResult> {
-    // 默认 CloudBase v2 SDK 直传 COS 需要用户态；生产临时免鉴权时 ensureAnonAuth 会直接返回。
+    // CloudBase v2 SDK 直传 COS 也需要用户态（plan.md Q-PLAN-8 方案 A 匿名鉴权）
     await ensureAnonAuth()
     const app = getApp()
     progress.value = 0
