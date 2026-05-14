@@ -40,7 +40,6 @@ const TCB_API_PROXY_PREFIX = '/tcb'
 const TCB_GATEWAY_PROXY_PREFIX = '/tcb-gateway'
 const COS_PROXY_PREFIX = '/cos'
 const FLAG_KEY = '__cloudbasePatchInstalled__'
-const EDGEONE_PREVIEW_PARAMS_KEY = 'zy-edgeone-preview-params'
 
 function isAuthGatewayPath(pathname: string): boolean {
   return pathname.startsWith('/auth/v1/') || pathname.startsWith('/v1/auth/')
@@ -51,42 +50,12 @@ function shouldProxyCos(method?: string): boolean {
   return ['PUT', 'POST', 'PATCH', 'DELETE', 'OPTIONS'].includes(normalized)
 }
 
-function collectEdgeOnePreviewParams(): URLSearchParams {
-  const merged = new URLSearchParams()
-
-  try {
-    const cached = sessionStorage.getItem(EDGEONE_PREVIEW_PARAMS_KEY)
-    if (cached) {
-      new URLSearchParams(cached).forEach((value, key) => {
-        if (key.startsWith('eo_')) merged.set(key, value)
-      })
-    }
-  } catch {
-    /* ignore private browsing storage failures */
-  }
-
-  const sources = [window.location.search, window.location.hash.split('?')[1] || '']
-  sources.forEach((source) => {
-    const params = new URLSearchParams(source)
-    params.forEach((value, key) => {
-      if (key.startsWith('eo_')) merged.set(key, value)
-    })
-  })
-
-  if ([...merged.keys()].length) {
-    try {
-      sessionStorage.setItem(EDGEONE_PREVIEW_PARAMS_KEY, merged.toString())
-    } catch {
-      /* ignore private browsing storage failures */
-    }
-  }
-
-  return merged
-}
-
 function appendEdgeOnePreviewParams(url: URL): void {
-  collectEdgeOnePreviewParams().forEach((value, key) => {
-    if (!url.searchParams.has(key)) url.searchParams.set(key, value)
+  const current = new URLSearchParams(window.location.search)
+  current.forEach((value, key) => {
+    if (key.startsWith('eo_') && !url.searchParams.has(key)) {
+      url.searchParams.set(key, value)
+    }
   })
 }
 
