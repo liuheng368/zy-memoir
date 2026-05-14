@@ -18,6 +18,12 @@ export const MAX_STUDENT_RECORDINGS = 5
 /** 教师录音段数上限（plan Q-PLAN-12 默认采纳"不限"，前端不卡，仅占位） */
 export const MAX_TEACHER_RECORDINGS = Infinity
 
+/** 班级素材墙：每个登录身份最多上传 99 张图片 */
+export const MAX_CLASS_MEDIA_PHOTOS = 99
+
+/** 班级素材墙：每个登录身份最多上传 99 条语音 */
+export const MAX_CLASS_MEDIA_RECORDINGS = 99
+
 /** 单段录音最长时长（秒，PRD 强制 60s） */
 export const MAX_RECORDING_SECONDS = 60
 

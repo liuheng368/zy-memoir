@@ -215,6 +215,24 @@
               "envVariables": {
                 "ADMIN_HMAC_KEY": "与 adminCheck 共用同一密钥"
               }
+            },
+            {
+              "name": "listClassMedia",
+              "$comment": "班级素材墙：公开读取照片 / 语音，现场 getTempFileURL 刷新",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5
+            },
+            {
+              "name": "addClassMedia",
+              "$comment": "班级素材墙：学生 / 老师 / 管理员上传照片或语音，每人每类 99 条",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 studentLogin / teacherLogin 共用同一密钥",
+                "ADMIN_HMAC_KEY": "与 adminCheck 共用同一密钥"
+              }
             }
           ]
         }

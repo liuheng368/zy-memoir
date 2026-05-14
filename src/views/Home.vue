@@ -25,6 +25,7 @@ import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import HomeTopbar from '@/components/home/HomeTopbar.vue'
 import BannerCarousel from '@/components/home/BannerCarousel.vue'
+import ClassMediaWall from '@/components/home/ClassMediaWall.vue'
 import TeacherSection from '@/components/home/TeacherSection.vue'
 import StudentWall from '@/components/home/StudentWall.vue'
 import StudentOverlay from '@/components/overlays/StudentOverlay.vue'
@@ -49,10 +50,7 @@ const studentOverlayOpen = ref(false)
 const currentStudentId = ref<number | null>(null)
 const studentOverlayMode = computed<'owner' | 'visitor'>(() => {
   if (role.value === 'admin') return 'owner'
-  if (
-    role.value === 'student' &&
-    studentProfile.value?.studentId === currentStudentId.value
-  ) {
+  if (role.value === 'student' && studentProfile.value?.studentId === currentStudentId.value) {
     return 'owner'
   }
   return 'visitor'
@@ -87,10 +85,7 @@ const teacherOverlayOpen = ref(false)
 const currentTeacherId = ref<number | null>(null)
 const teacherOverlayMode = computed<'owner' | 'visitor'>(() => {
   if (role.value === 'admin') return 'owner'
-  if (
-    role.value === 'teacher' &&
-    teacherProfile.value?.teacherId === currentTeacherId.value
-  ) {
+  if (role.value === 'teacher' && teacherProfile.value?.teacherId === currentTeacherId.value) {
     return 'owner'
   }
   return 'visitor'
@@ -135,6 +130,8 @@ function retryStudents() {
       @click-avatar="handleTeacherClick"
       @play-recording="handleTeacherPlay"
     />
+
+    <ClassMediaWall />
 
     <StudentWall
       :students="students.data"

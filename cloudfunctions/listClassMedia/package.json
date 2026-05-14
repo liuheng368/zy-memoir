@@ -1,0 +1,9 @@
+{
+  "name": "listClassMedia",
+  "version": "1.0.0",
+  "description": "班级素材墙列表",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.13.0"
+  }
+}
