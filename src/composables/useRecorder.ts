@@ -37,6 +37,43 @@ function pickMime(): string {
   return ''
 }
 
+function normalizeStartError(e: unknown): string {
+  const err = e as Error & { name?: string }
+  const name = err?.name || ''
+  const message = err?.message || ''
+  const lowerMessage = message.toLowerCase()
+
+  if (
+    name === 'NotAllowedError' ||
+    name === 'PermissionDeniedError' ||
+    name === 'SecurityError' ||
+    lowerMessage.includes('permission denied')
+  ) {
+    if (lowerMessage.includes('system')) {
+      return '系统已禁止浏览器使用麦克风，请在系统设置或浏览器设置中允许麦克风权限后重试'
+    }
+    return '麦克风权限被拒绝，请在浏览器地址栏或系统设置中允许麦克风权限后重试'
+  }
+
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return '没有检测到可用麦克风，请连接麦克风后重试'
+  }
+
+  if (name === 'NotReadableError' || name === 'TrackStartError') {
+    return '麦克风正在被其他应用占用，请关闭占用麦克风的应用后重试'
+  }
+
+  if (name === 'OverconstrainedError') {
+    return '当前麦克风不满足录音要求，请更换设备后重试'
+  }
+
+  if (name === 'AbortError') {
+    return '麦克风启动被中断，请稍后重试'
+  }
+
+  return message || '麦克风启动失败'
+}
+
 export function useRecorder() {
   const status = ref<RecorderStatus>('idle')
   const elapsed = ref(0) // 秒
@@ -95,7 +132,7 @@ export function useRecorder() {
     try {
       _stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch (e) {
-      const msg = (e as Error)?.message || '麦克风权限被拒绝'
+      const msg = normalizeStartError(e)
       error.value = msg
       status.value = 'error'
       throw new Error(msg)
