@@ -40,6 +40,7 @@ const TCB_API_PROXY_PREFIX = '/tcb'
 const TCB_GATEWAY_PROXY_PREFIX = '/tcb-gateway'
 const COS_PROXY_PREFIX = '/cos'
 const FLAG_KEY = '__cloudbasePatchInstalled__'
+const EDGEONE_PREVIEW_PARAMS_KEY = 'zy-edgeone-preview-params'
 
 function isAuthGatewayPath(pathname: string): boolean {
   return pathname.startsWith('/auth/v1/') || pathname.startsWith('/v1/auth/')
@@ -48,6 +49,45 @@ function isAuthGatewayPath(pathname: string): boolean {
 function shouldProxyCos(method?: string): boolean {
   const normalized = (method || 'GET').toUpperCase()
   return ['PUT', 'POST', 'PATCH', 'DELETE', 'OPTIONS'].includes(normalized)
+}
+
+function collectEdgeOnePreviewParams(): URLSearchParams {
+  const merged = new URLSearchParams()
+
+  try {
+    const cached = sessionStorage.getItem(EDGEONE_PREVIEW_PARAMS_KEY)
+    if (cached) {
+      new URLSearchParams(cached).forEach((value, key) => {
+        if (key.startsWith('eo_')) merged.set(key, value)
+      })
+    }
+  } catch {
+    /* ignore private browsing storage failures */
+  }
+
+  const sources = [window.location.search, window.location.hash.split('?')[1] || '']
+  sources.forEach((source) => {
+    const params = new URLSearchParams(source)
+    params.forEach((value, key) => {
+      if (key.startsWith('eo_')) merged.set(key, value)
+    })
+  })
+
+  if ([...merged.keys()].length) {
+    try {
+      sessionStorage.setItem(EDGEONE_PREVIEW_PARAMS_KEY, merged.toString())
+    } catch {
+      /* ignore private browsing storage failures */
+    }
+  }
+
+  return merged
+}
+
+function appendEdgeOnePreviewParams(url: URL): void {
+  collectEdgeOnePreviewParams().forEach((value, key) => {
+    if (!url.searchParams.has(key)) url.searchParams.set(key, value)
+  })
 }
 
 /** 把 CloudBase 原始 URL 改写为同源代理路径 */
@@ -83,6 +123,7 @@ function rewriteUrl(input: string, method?: string): string {
     }
 
     const newUrl = new URL(newPath + parsed.search + parsed.hash, window.location.origin)
+    appendEdgeOnePreviewParams(newUrl)
     return newUrl.toString()
   } catch {
     // 非合法 URL（可能是相对路径），不动
