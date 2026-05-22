@@ -1,0 +1,9 @@
+{
+  "name": "removeClassMedia",
+  "version": "1.0.0",
+  "description": "班级素材墙删除：本人可删自己，管理员可删全部",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.13.0"
+  }
+}

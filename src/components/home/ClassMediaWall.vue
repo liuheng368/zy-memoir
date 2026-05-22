@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Lightbox from '@/components/common/Lightbox.vue'
-import { addClassMedia, listClassMedia, type ClassMediaItem } from '@/api/classMedia'
+import {
+  addClassMedia,
+  listClassMedia,
+  removeClassMedia,
+  type ClassMediaItem,
+} from '@/api/classMedia'
 import { useAudioPlayer } from '@/composables/useAudioPlayer'
 import { useImageCompress } from '@/composables/useImageCompress'
 import { useMp3Encode } from '@/composables/useMp3Encode'
@@ -31,6 +37,9 @@ const savingRecording = ref(false)
 const lightboxOpen = ref(false)
 const lightboxSrc = ref('')
 const lightboxAlt = ref('')
+const confirmDeleteOpen = ref(false)
+const deleteTarget = ref<ClassMediaItem | null>(null)
+const deletingId = ref<string | null>(null)
 
 const uploader = useUpload()
 const imageCompress = useImageCompress()
@@ -46,6 +55,16 @@ const ownerKey = computed(() => {
   if (role.value === 'teacher') return `teacher-${teacherProfile.value?.teacherId ?? 'unknown'}`
   if (role.value === 'admin') return 'admin'
   return 'guest'
+})
+const currentOwnerKey = computed(() => {
+  if (role.value === 'student' && Number.isInteger(studentProfile.value?.studentId)) {
+    return `student:${studentProfile.value?.studentId}`
+  }
+  if (role.value === 'teacher' && Number.isInteger(teacherProfile.value?.teacherId)) {
+    return `teacher:${teacherProfile.value?.teacherId}`
+  }
+  if (role.value === 'admin') return 'admin'
+  return ''
 })
 const myItems = computed(() => {
   if (!isLoggedIn.value) return []
@@ -108,6 +127,12 @@ function tileClass(item: ClassMediaItem): string {
 
 function mediaSrc(url: string): string {
   return proxiedMediaUrl(url) || url
+}
+
+function canDeleteItem(item: ClassMediaItem): boolean {
+  if (!token.value) return false
+  if (role.value === 'admin') return true
+  return !!currentOwnerKey.value && item.ownerKey === currentOwnerKey.value
 }
 
 function guessExt(file: File | Blob): string {
@@ -237,6 +262,33 @@ async function toggleRecording(item: ClassMediaItem): Promise<void> {
   }
 }
 
+function requestDelete(item: ClassMediaItem): void {
+  if (!canDeleteItem(item)) return
+  deleteTarget.value = item
+  confirmDeleteOpen.value = true
+}
+
+async function confirmDelete(): Promise<void> {
+  const item = deleteTarget.value
+  if (!item || !token.value) return
+  deletingId.value = item.id
+  const tid = toast.loading('正在删除…')
+  try {
+    await removeClassMedia({ token: token.value, mediaId: item.id })
+    items.value = items.value.filter((it) => it.id !== item.id)
+    if (item.type === 'recording' && audioPlayer.currentUrl.value === mediaSrc(item.url)) {
+      audioPlayer.stop()
+    }
+    toast.success('已删除')
+  } catch (e) {
+    toast.error((e as Error)?.message || '删除失败')
+  } finally {
+    toast.dismiss(tid)
+    deletingId.value = null
+    deleteTarget.value = null
+  }
+}
+
 function formatDuration(sec?: number): string {
   const n = Math.max(0, Math.round(sec || 0))
   const m = Math.floor(n / 60)
@@ -346,10 +398,30 @@ function formatDuration(sec?: number): string {
           <span>{{ item.ownerName || '匿名' }}</span>
           <span>{{ item.type === 'photo' ? '图片' : '语音' }}</span>
         </footer>
+        <button
+          v-if="canDeleteItem(item)"
+          type="button"
+          class="delete-media-btn"
+          :disabled="deletingId === item.id"
+          :aria-label="`删除${item.type === 'photo' ? '图片' : '语音'}`"
+          @click.stop="requestDelete(item)"
+        >
+          ×
+        </button>
       </article>
     </div>
 
     <Lightbox v-model:open="lightboxOpen" :src="lightboxSrc" :alt="lightboxAlt" />
+    <ConfirmDialog
+      v-model:open="confirmDeleteOpen"
+      title="删除这条回忆？"
+      :content="`删除后这条${deleteTarget?.type === 'recording' ? '语音' : '图片'}将从回忆散落中移除。`"
+      ok-text="删除"
+      cancel-text="取消"
+      danger
+      @ok="confirmDelete"
+      @cancel="deleteTarget = null"
+    />
   </section>
 </template>
 
@@ -480,6 +552,28 @@ function formatDuration(sec?: number): string {
   border-radius: var(--radius-md);
   background: #fff8f5;
   border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.delete-media-btn {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.52);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.delete-media-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 
 .media-card.photo {

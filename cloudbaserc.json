@@ -233,6 +233,17 @@
                 "AUTH_HMAC_KEY": "与 studentLogin / teacherLogin 共用同一密钥",
                 "ADMIN_HMAC_KEY": "与 adminCheck 共用同一密钥"
               }
+            },
+            {
+              "name": "removeClassMedia",
+              "$comment": "班级素材墙：学生 / 老师可删除自己上传的素材，管理员可删除全部",
+              "runtime": "Nodejs18.15",
+              "memorySize": 128,
+              "timeout": 5,
+              "envVariables": {
+                "AUTH_HMAC_KEY": "与 studentLogin / teacherLogin 共用同一密钥",
+                "ADMIN_HMAC_KEY": "与 adminCheck 共用同一密钥"
+              }
             }
           ]
         }

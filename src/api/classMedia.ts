@@ -51,6 +51,11 @@ export interface AddClassMediaInput {
   duration?: number
 }
 
+export interface RemoveClassMediaInput {
+  token: string
+  mediaId: string
+}
+
 export async function listClassMedia(): Promise<ClassMediaItem[]> {
   const res = await callFunction<CloudFnResponse<{ items: ClassMediaItem[] }>>('listClassMedia')
   return unwrap(res).items
@@ -63,5 +68,10 @@ export async function addClassMedia(input: AddClassMediaInput): Promise<{
   const res = await callFunction<
     CloudFnResponse<{ item: ClassMediaItem; counts: { photos: number; recordings: number } }>
   >('addClassMedia', input)
+  return unwrap(res)
+}
+
+export async function removeClassMedia(input: RemoveClassMediaInput): Promise<{ mediaId: string }> {
+  const res = await callFunction<CloudFnResponse<{ mediaId: string }>>('removeClassMedia', input)
   return unwrap(res)
 }
