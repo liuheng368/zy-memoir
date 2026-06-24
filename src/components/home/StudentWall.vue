@@ -4,15 +4,15 @@
  *
  * 布局：
  *   - 默认 8 列；< 768 px → 4 列
- *   - `grid-auto-flow: dense`，按 id 哈希让 ~⅙ 的单元格 `span 2`，
+ *   - `grid-auto-flow: dense`，按本次随机盐让 ~⅙ 的单元格 `span 2`，
  *     得到「错落」错位效果；其余 cell 走 1×1
- *   - 子元素旋转 / 平移由 StudentAvatar.vue 自身根据 id 计算（保证刷新稳定）
+ *   - 子元素旋转 / 平移由 StudentAvatar.vue 自身根据 id 计算
  *
  * 主态：根据 auth.studentProfile?.studentId 与 student.id 比对决定 mode='owner'
  *
  * 数据源：由 Home.vue 通过 props 注入；空态 / 加载态独立分支
  */
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import StudentAvatar from './StudentAvatar.vue'
 import type { StudentSummary } from '@/api/students'
 import type { SectionStatus } from '@/stores/classData'
@@ -30,6 +30,7 @@ const emit = defineEmits<{
 }>()
 
 const auth = useAuthStore()
+const shuffleSalt = ref(Math.random().toString(36).slice(2))
 
 const ownerStudentId = computed(() => {
   if (auth.role !== 'student') return null
@@ -40,17 +41,42 @@ const showSkeleton = computed(() => props.status === 'loading' || props.status =
 const showError = computed(() => props.status === 'error')
 const isEmpty = computed(() => props.status === 'ready' && props.students.length === 0)
 const skeletonCount = TOTAL_STUDENTS
+const shuffledStudents = computed(() => {
+  return [...props.students].sort((a, b) => {
+    if (ownerStudentId.value !== null) {
+      if (a.id === ownerStudentId.value) return -1
+      if (b.id === ownerStudentId.value) return 1
+    }
+    return randomWeight(a.id) - randomWeight(b.id)
+  })
+})
+
+watch(
+  () => props.status,
+  (status) => {
+    if (status === 'loading') shuffleSalt.value = Math.random().toString(36).slice(2)
+  },
+)
+
+function randomWeight(id: number): number {
+  const s = `${shuffleSalt.value}:${id}`
+  let h = 2166136261
+  for (let i = 0; i < s.length; i += 1) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
 
 /**
  * 给每个学生计算一个 cell 类：
- *   - 大约每 6 张里挑 1 张 `wide`（span 2 列）；id 哈希稳定
+ *   - 大约每 6 张里挑 1 张 `wide`（span 2 列）；随本次刷新随机
  *   - 主态卡片强制 `wide`，让"自己"更突出
  */
 function cellClass(s: StudentSummary): string {
   const isOwner = ownerStudentId.value === s.id
   if (isOwner) return 'cell wide owner'
-  // 简单稳定哈希：id * 2654435761 (Knuth) 后 mod 6
-  const h = ((s.id * 2654435761) >>> 0) % 6
+  const h = randomWeight(s.id) % 6
   return h === 0 ? 'cell wide' : 'cell'
 }
 
@@ -90,7 +116,7 @@ function handleClick(s: StudentSummary) {
 
     <!-- 正常 -->
     <div v-else class="grid">
-      <div v-for="s in students" :key="s.id" :class="cellClass(s)">
+      <div v-for="s in shuffledStudents" :key="s.id" :class="cellClass(s)">
         <StudentAvatar :student="s" :mode="modeFor(s)" @click="handleClick" />
       </div>
     </div>

@@ -41,6 +41,7 @@ coverage/
 # 仅当个别脚手架把缓存写到项目内时生效，正常情况位于用户家目录
 .cloudbase/
 .tcb-cache/
+.edgeone/
 # 云函数依赖
 cloudfunctions/**/node_modules/
 

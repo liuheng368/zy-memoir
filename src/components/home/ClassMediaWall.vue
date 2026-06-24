@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Lightbox from '@/components/common/Lightbox.vue'
@@ -24,6 +24,8 @@ import {
 import { proxiedMediaUrl } from '@/utils/mediaUrl'
 
 type Status = 'idle' | 'loading' | 'ready' | 'error'
+const MEDIA_PAGE_SIZE = 8
+const SWIPE_THRESHOLD = 42
 
 const auth = useAuthStore()
 const { role, token, displayName, studentProfile, teacherProfile } = storeToRefs(auth)
@@ -40,6 +42,9 @@ const lightboxAlt = ref('')
 const confirmDeleteOpen = ref(false)
 const deleteTarget = ref<ClassMediaItem | null>(null)
 const deletingId = ref<string | null>(null)
+const currentPage = ref(0)
+const touchStartX = ref<number | null>(null)
+const touchStartY = ref<number | null>(null)
 
 const uploader = useUpload()
 const imageCompress = useImageCompress()
@@ -93,9 +98,27 @@ const isRecording = computed(() => recorder.status.value === 'recording')
 const shuffledItems = computed(() => {
   return [...items.value].sort((a, b) => stableWeight(a) - stableWeight(b))
 })
+const mediaPages = computed(() => {
+  const pages: ClassMediaItem[][] = []
+  for (let i = 0; i < shuffledItems.value.length; i += MEDIA_PAGE_SIZE) {
+    pages.push(shuffledItems.value.slice(i, i + MEDIA_PAGE_SIZE))
+  }
+  return pages
+})
+const pageCount = computed(() => mediaPages.value.length)
+const canGoPrev = computed(() => currentPage.value > 0)
+const canGoNext = computed(() => currentPage.value < pageCount.value - 1)
 
 onMounted(() => {
   void refresh()
+})
+
+watch(pageCount, (count) => {
+  if (count <= 0) {
+    currentPage.value = 0
+    return
+  }
+  if (currentPage.value > count - 1) currentPage.value = count - 1
 })
 
 async function refresh(): Promise<void> {
@@ -103,6 +126,7 @@ async function refresh(): Promise<void> {
   error.value = null
   try {
     items.value = await listClassMedia()
+    currentPage.value = 0
     status.value = 'ready'
   } catch (e) {
     error.value = (e as Error)?.message || '加载失败'
@@ -123,6 +147,41 @@ function tileClass(item: ClassMediaItem): string {
   if (n === 0) return 'photo-large'
   if (n === 1 || n === 2) return 'photo-tall'
   return 'photo'
+}
+
+function goToPage(index: number): void {
+  if (!pageCount.value) {
+    currentPage.value = 0
+    return
+  }
+  currentPage.value = Math.min(pageCount.value - 1, Math.max(0, index))
+}
+
+function goPrev(): void {
+  goToPage(currentPage.value - 1)
+}
+
+function goNext(): void {
+  goToPage(currentPage.value + 1)
+}
+
+function onTouchStart(ev: TouchEvent): void {
+  touchStartX.value = ev.touches[0]?.clientX ?? null
+  touchStartY.value = ev.touches[0]?.clientY ?? null
+}
+
+function onTouchEnd(ev: TouchEvent): void {
+  if (touchStartX.value === null) return
+  const endX = ev.changedTouches[0]?.clientX ?? touchStartX.value
+  const endY = ev.changedTouches[0]?.clientY ?? touchStartY.value ?? 0
+  const delta = endX - touchStartX.value
+  const verticalDelta = Math.abs(endY - (touchStartY.value ?? endY))
+  touchStartX.value = null
+  touchStartY.value = null
+  if (Math.abs(delta) < SWIPE_THRESHOLD) return
+  if (Math.abs(delta) <= verticalDelta * 1.2) return
+  if (delta < 0) goNext()
+  else goPrev()
 }
 
 function mediaSrc(url: string): string {
@@ -184,6 +243,7 @@ async function onPhotoSelected(ev: Event): Promise<void> {
       url: result.url,
     })
     items.value = [saved.item, ...items.value]
+    currentPage.value = 0
     toast.success('图片已加入回忆墙')
   } catch (e) {
     toast.error((e as Error)?.message || '图片上传失败')
@@ -235,6 +295,7 @@ async function stopAndSaveRecording(): Promise<void> {
       duration: encoded.duration,
     })
     items.value = [saved.item, ...items.value]
+    currentPage.value = 0
     toast.success('语音已加入回忆墙')
   } catch (e) {
     toast.error((e as Error)?.message || '语音上传失败')
@@ -360,55 +421,93 @@ function formatDuration(sec?: number): string {
     </div>
     <div v-else-if="!items.length" class="state">还没有照片或语音，第一条可以从这里开始。</div>
 
-    <div v-else class="media-grid">
-      <article
-        v-for="item in shuffledItems"
-        :key="item.id"
-        class="media-card"
-        :class="tileClass(item)"
-      >
+    <div v-else class="media-pager">
+      <div class="pager-head">
+        <span>第 {{ currentPage + 1 }} / {{ pageCount }} 页</span>
+        <div class="pager-actions" aria-label="回忆散落分页">
+          <button type="button" :disabled="!canGoPrev" aria-label="上一页" @click="goPrev">
+            ‹
+          </button>
+          <button type="button" :disabled="!canGoNext" aria-label="下一页" @click="goNext">
+            ›
+          </button>
+        </div>
+      </div>
+      <div class="media-viewport" @touchstart.passive="onTouchStart" @touchend.passive="onTouchEnd">
+        <div class="media-track" :style="{ transform: `translateX(-${currentPage * 100}%)` }">
+          <div
+            v-for="(page, pageIndex) in mediaPages"
+            :key="pageIndex"
+            class="media-page"
+            :aria-hidden="pageIndex !== currentPage"
+          >
+            <div class="media-grid">
+              <article
+                v-for="item in page"
+                :key="item.id"
+                class="media-card"
+                :class="tileClass(item)"
+              >
+                <button
+                  v-if="item.type === 'photo'"
+                  type="button"
+                  class="photo-btn"
+                  :aria-label="`查看 ${item.ownerName} 上传的图片`"
+                  @click="openImage(item)"
+                >
+                  <img
+                    :src="mediaSrc(item.url)"
+                    :alt="`${item.ownerName} 上传的图片`"
+                    loading="lazy"
+                  />
+                </button>
+                <button
+                  v-else
+                  type="button"
+                  class="voice-btn"
+                  :class="{ playing: audioPlayer.isPlaying(mediaSrc(item.url)) }"
+                  @click="toggleRecording(item)"
+                >
+                  <span class="play-icon">{{
+                    audioPlayer.isPlaying(mediaSrc(item.url)) ? '暂停' : '播放'
+                  }}</span>
+                  <span class="voice-meta">
+                    <strong>{{ item.ownerName || '匿名' }}</strong>
+                    <small>{{ formatDuration(item.duration) }}</small>
+                  </span>
+                  <span class="voice-bar">
+                    <i :style="{ width: `${audioPlayer.progress(mediaSrc(item.url)) * 100}%` }"></i>
+                  </span>
+                </button>
+                <footer class="media-foot">
+                  <span>{{ item.ownerName || '匿名' }}</span>
+                  <span>{{ item.type === 'photo' ? '图片' : '语音' }}</span>
+                </footer>
+                <button
+                  v-if="canDeleteItem(item)"
+                  type="button"
+                  class="delete-media-btn"
+                  :disabled="deletingId === item.id"
+                  :aria-label="`删除${item.type === 'photo' ? '图片' : '语音'}`"
+                  @click.stop="requestDelete(item)"
+                >
+                  ×
+                </button>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-if="pageCount > 1" class="pager-dots" aria-label="分页指示器">
         <button
-          v-if="item.type === 'photo'"
+          v-for="pageIndex in pageCount"
+          :key="pageIndex"
           type="button"
-          class="photo-btn"
-          :aria-label="`查看 ${item.ownerName} 上传的图片`"
-          @click="openImage(item)"
-        >
-          <img :src="mediaSrc(item.url)" :alt="`${item.ownerName} 上传的图片`" loading="lazy" />
-        </button>
-        <button
-          v-else
-          type="button"
-          class="voice-btn"
-          :class="{ playing: audioPlayer.isPlaying(mediaSrc(item.url)) }"
-          @click="toggleRecording(item)"
-        >
-          <span class="play-icon">{{
-            audioPlayer.isPlaying(mediaSrc(item.url)) ? '暂停' : '播放'
-          }}</span>
-          <span class="voice-meta">
-            <strong>{{ item.ownerName || '匿名' }}</strong>
-            <small>{{ formatDuration(item.duration) }}</small>
-          </span>
-          <span class="voice-bar">
-            <i :style="{ width: `${audioPlayer.progress(mediaSrc(item.url)) * 100}%` }"></i>
-          </span>
-        </button>
-        <footer class="media-foot">
-          <span>{{ item.ownerName || '匿名' }}</span>
-          <span>{{ item.type === 'photo' ? '图片' : '语音' }}</span>
-        </footer>
-        <button
-          v-if="canDeleteItem(item)"
-          type="button"
-          class="delete-media-btn"
-          :disabled="deletingId === item.id"
-          :aria-label="`删除${item.type === 'photo' ? '图片' : '语音'}`"
-          @click.stop="requestDelete(item)"
-        >
-          ×
-        </button>
-      </article>
+          :class="{ active: pageIndex - 1 === currentPage }"
+          :aria-label="`跳到第 ${pageIndex} 页`"
+          @click="goToPage(pageIndex - 1)"
+        ></button>
+      </div>
     </div>
 
     <Lightbox v-model:open="lightboxOpen" :src="lightboxSrc" :alt="lightboxAlt" />
@@ -537,12 +636,89 @@ function formatDuration(sec?: number): string {
   cursor: pointer;
 }
 
+.media-pager {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pager-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  color: var(--color-text-soft);
+  font-size: 12px;
+}
+
+.pager-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.pager-actions button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 122, 142, 0.28);
+  border-radius: 999px;
+  background: #fff;
+  color: #ff6c80;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pager-actions button:disabled {
+  opacity: 0.36;
+  cursor: not-allowed;
+}
+
+.media-viewport {
+  overflow: hidden;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+}
+
+.media-track {
+  display: flex;
+  transition: transform 0.28s ease;
+  will-change: transform;
+}
+
+.media-page {
+  flex: 0 0 100%;
+  min-width: 100%;
+}
+
 .media-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   grid-auto-rows: 74px;
   grid-auto-flow: dense;
   gap: 10px;
+}
+
+.pager-dots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  min-height: 16px;
+}
+
+.pager-dots button {
+  width: 7px;
+  height: 7px;
+  border: none;
+  border-radius: 999px;
+  padding: 0;
+  background: rgba(255, 122, 142, 0.26);
+  cursor: pointer;
+}
+
+.pager-dots button.active {
+  width: 18px;
+  background: #ff7a8e;
 }
 
 .media-card {
@@ -732,6 +908,19 @@ function formatDuration(sec?: number): string {
     justify-content: flex-start;
   }
 
+  .pager-head {
+    justify-content: center;
+    min-height: 22px;
+  }
+
+  .pager-actions {
+    display: none;
+  }
+
+  .media-viewport {
+    cursor: grab;
+  }
+
   .media-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     grid-auto-rows: 68px;
@@ -755,6 +944,10 @@ function formatDuration(sec?: number): string {
 
   .media-card.voice {
     grid-column: span 4;
+  }
+
+  .pager-dots button {
+    pointer-events: none;
   }
 }
 

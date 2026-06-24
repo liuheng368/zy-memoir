@@ -1,0 +1,39 @@
+name: deploy-edgeone-preview
+
+# 部署 EdgeOne Pages 测试环境。develop 每次 push 自动部署；
+# 也支持手动选择分支部署，不影响 main 生产环境。
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy as EdgeOne preview'
+        required: true
+        default: 'develop'
+
+concurrency:
+  group: deploy-edgeone-preview-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EDGEONE_PROJECT_NAME: zy-memoir-preview
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref_name }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.11.0'
+
+      - name: Deploy EdgeOne preview
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+        run: npx edgeone pages deploy . -n "$EDGEONE_PROJECT_NAME" -t "$EDGEONE_API_TOKEN" -e preview
