@@ -1,17 +1,19 @@
 name: deploy-edgeone-preview
 
-# 手动部署 EdgeOne Pages 测试环境。默认部署当前回忆散落分页测试分支，
-# 不影响 main 生产环境。
+# 部署 EdgeOne Pages 测试环境。develop 每次 push 自动部署；
+# 也支持手动选择分支部署，不影响 main 生产环境。
 on:
+  push:
+    branches: [develop]
   workflow_dispatch:
     inputs:
       branch:
         description: 'Branch to deploy as EdgeOne preview'
         required: true
-        default: 'codex-class-media-pagination'
+        default: 'develop'
 
 concurrency:
-  group: deploy-edgeone-preview-${{ github.event.inputs.branch }}
+  group: deploy-edgeone-preview-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -25,7 +27,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref_name }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
