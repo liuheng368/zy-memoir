@@ -44,6 +44,7 @@ const deleteTarget = ref<ClassMediaItem | null>(null)
 const deletingId = ref<string | null>(null)
 const currentPage = ref(0)
 const touchStartX = ref<number | null>(null)
+const touchStartY = ref<number | null>(null)
 
 const uploader = useUpload()
 const imageCompress = useImageCompress()
@@ -166,14 +167,19 @@ function goNext(): void {
 
 function onTouchStart(ev: TouchEvent): void {
   touchStartX.value = ev.touches[0]?.clientX ?? null
+  touchStartY.value = ev.touches[0]?.clientY ?? null
 }
 
 function onTouchEnd(ev: TouchEvent): void {
   if (touchStartX.value === null) return
   const endX = ev.changedTouches[0]?.clientX ?? touchStartX.value
+  const endY = ev.changedTouches[0]?.clientY ?? touchStartY.value ?? 0
   const delta = endX - touchStartX.value
+  const verticalDelta = Math.abs(endY - (touchStartY.value ?? endY))
   touchStartX.value = null
+  touchStartY.value = null
   if (Math.abs(delta) < SWIPE_THRESHOLD) return
+  if (Math.abs(delta) <= verticalDelta * 1.2) return
   if (delta < 0) goNext()
   else goPrev()
 }
@@ -670,7 +676,8 @@ function formatDuration(sec?: number): string {
 
 .media-viewport {
   overflow: hidden;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
 }
 
 .media-track {
@@ -901,9 +908,17 @@ function formatDuration(sec?: number): string {
     justify-content: flex-start;
   }
 
-  .pager-actions button {
-    width: 34px;
-    height: 34px;
+  .pager-head {
+    justify-content: center;
+    min-height: 22px;
+  }
+
+  .pager-actions {
+    display: none;
+  }
+
+  .media-viewport {
+    cursor: grab;
   }
 
   .media-grid {
@@ -929,6 +944,10 @@ function formatDuration(sec?: number): string {
 
   .media-card.voice {
     grid-column: span 4;
+  }
+
+  .pager-dots button {
+    pointer-events: none;
   }
 }
 
