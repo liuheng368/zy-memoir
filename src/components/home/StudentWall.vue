@@ -12,7 +12,7 @@
  *
  * 数据源：由 Home.vue 通过 props 注入；空态 / 加载态独立分支
  */
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import StudentAvatar from './StudentAvatar.vue'
 import type { StudentSummary } from '@/api/students'
 import type { SectionStatus } from '@/stores/classData'
@@ -30,6 +30,7 @@ const emit = defineEmits<{
 }>()
 
 const auth = useAuthStore()
+const shuffleSalt = ref(Math.random().toString(36).slice(2))
 
 const ownerStudentId = computed(() => {
   if (auth.role !== 'student') return null
@@ -40,6 +41,26 @@ const showSkeleton = computed(() => props.status === 'loading' || props.status =
 const showError = computed(() => props.status === 'error')
 const isEmpty = computed(() => props.status === 'ready' && props.students.length === 0)
 const skeletonCount = TOTAL_STUDENTS
+const shuffledStudents = computed(() => {
+  return [...props.students].sort((a, b) => randomWeight(a.id) - randomWeight(b.id))
+})
+
+watch(
+  () => props.status,
+  (status) => {
+    if (status === 'loading') shuffleSalt.value = Math.random().toString(36).slice(2)
+  },
+)
+
+function randomWeight(id: number): number {
+  const s = `${shuffleSalt.value}:${id}`
+  let h = 2166136261
+  for (let i = 0; i < s.length; i += 1) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
 
 /**
  * 给每个学生计算一个 cell 类：
@@ -90,7 +111,7 @@ function handleClick(s: StudentSummary) {
 
     <!-- 正常 -->
     <div v-else class="grid">
-      <div v-for="s in students" :key="s.id" :class="cellClass(s)">
+      <div v-for="s in shuffledStudents" :key="s.id" :class="cellClass(s)">
         <StudentAvatar :student="s" :mode="modeFor(s)" @click="handleClick" />
       </div>
     </div>
