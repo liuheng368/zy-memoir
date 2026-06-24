@@ -4,9 +4,9 @@
  *
  * 布局：
  *   - 默认 8 列；< 768 px → 4 列
- *   - `grid-auto-flow: dense`，按 id 哈希让 ~⅙ 的单元格 `span 2`，
+ *   - `grid-auto-flow: dense`，按本次随机盐让 ~⅙ 的单元格 `span 2`，
  *     得到「错落」错位效果；其余 cell 走 1×1
- *   - 子元素旋转 / 平移由 StudentAvatar.vue 自身根据 id 计算（保证刷新稳定）
+ *   - 子元素旋转 / 平移由 StudentAvatar.vue 自身根据 id 计算
  *
  * 主态：根据 auth.studentProfile?.studentId 与 student.id 比对决定 mode='owner'
  *
@@ -70,14 +70,13 @@ function randomWeight(id: number): number {
 
 /**
  * 给每个学生计算一个 cell 类：
- *   - 大约每 6 张里挑 1 张 `wide`（span 2 列）；id 哈希稳定
+ *   - 大约每 6 张里挑 1 张 `wide`（span 2 列）；随本次刷新随机
  *   - 主态卡片强制 `wide`，让"自己"更突出
  */
 function cellClass(s: StudentSummary): string {
   const isOwner = ownerStudentId.value === s.id
   if (isOwner) return 'cell wide owner'
-  // 简单稳定哈希：id * 2654435761 (Knuth) 后 mod 6
-  const h = ((s.id * 2654435761) >>> 0) % 6
+  const h = randomWeight(s.id) % 6
   return h === 0 ? 'cell wide' : 'cell'
 }
 
