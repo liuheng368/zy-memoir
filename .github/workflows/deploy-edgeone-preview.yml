@@ -21,32 +21,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      EDGEONE_PROJECT_NAME: zy-memoir
-      PNPM_STORE_PATH: .pnpm-store
+      EDGEONE_PROJECT_NAME: zy-memoir-preview
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref_name }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.2
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22.11.0'
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
 
       - name: Deploy EdgeOne preview
         env:
           EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
-        run: npx edgeone pages deploy -n "$EDGEONE_PROJECT_NAME" -t "$EDGEONE_API_TOKEN" -e preview
+        run: npx edgeone pages deploy . -n "$EDGEONE_PROJECT_NAME" -t "$EDGEONE_API_TOKEN" -e preview
