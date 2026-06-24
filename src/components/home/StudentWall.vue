@@ -42,7 +42,13 @@ const showError = computed(() => props.status === 'error')
 const isEmpty = computed(() => props.status === 'ready' && props.students.length === 0)
 const skeletonCount = TOTAL_STUDENTS
 const shuffledStudents = computed(() => {
-  return [...props.students].sort((a, b) => randomWeight(a.id) - randomWeight(b.id))
+  return [...props.students].sort((a, b) => {
+    if (ownerStudentId.value !== null) {
+      if (a.id === ownerStudentId.value) return -1
+      if (b.id === ownerStudentId.value) return 1
+    }
+    return randomWeight(a.id) - randomWeight(b.id)
+  })
 })
 
 watch(
